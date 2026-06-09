@@ -6,12 +6,11 @@ exports.handler = async (event) => {
   const orgId = params.orgId || '116';
   const tblId = params.tblId || 'DT_MLTM_1946';
   const prdSe = params.prdSe || 'M';
-  const startPrdDe = params.startPrdDe || '200701';
+  const startPrdDe = params.startPrdDe || '202301';
   const endPrdDe = params.endPrdDe || '202612';
   const API_KEY = 'MTI0YzJmMjQzNTg1OGQwYzczNTEzYmY2NDk3MGQxY2Q=';
 
-  // 서울(0002)만 요청 — 전국(ALL) 대신
-  const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=13103871089T1+&objL1=ALL&objL2=ALL&objL3=0002&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
+  const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=13103871089T1+&objL1=ALL&objL2=ALL&objL3=ALL&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
 
   return new Promise((resolve) => {
     https.get(url, (res) => {
