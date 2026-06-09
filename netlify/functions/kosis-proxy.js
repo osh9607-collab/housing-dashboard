@@ -15,62 +15,54 @@ function fetchUrl(url) {
  
 const API_KEY = 'MTI0YzJmMjQzNTg1OGQwYzczNTEzYmY2NDk3MGQxY2Q=';
  
-// 통계표별 설정
 const TBL_CONFIG = {
-  // 인허가 (서울 C1=13102871090A.0003)
+  // 인허가 (월별누계 → 순증 변환 필요)
   'DT_MLTM_1948': {
     itmId: '13103871090T1+',
     objL: 'objL1=13102871090A.0003&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
-    split: true,
+    orgId: '116', split: true,
   },
-  // 착공 (구조 확인 필요 - 우선 ALL로)
+  // 착공 (월계 - 변환 불필요)
   'DT_MLTM_5387': {
     itmId: '13103766969T1+',
-    objL: 'objL1=ALL&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
-    split: true,
+    objL: 'objL1=13102766969A.0003&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
+    orgId: '116', split: true,
   },
-  // 준공
+  // 준공 (월계 - 변환 불필요)
   'DT_MLTM_5373': {
     itmId: '13103766973T1+',
-    objL: 'objL1=ALL&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
-    split: true,
+    objL: 'objL1=13102766973A.0003&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
+    orgId: '116', split: true,
   },
   // 멸실 (연간)
   'DT_MLTM_5416': {
     itmId: '13103883384T1+13103883384T2+13103883384T3+13103883384T4+13103883384T5+13103883384T6+',
     objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
-    split: false,
-    prdSe: 'Y',
-    startPrdDe: '2010',
-    endPrdDe: '2024',
+    orgId: '116', split: false, prdSe: 'Y', startPrdDe: '2010', endPrdDe: '2024',
   },
   // 매매가격지수
   'DT_KAB_11672_S7': {
     itmId: 'T1+T2+',
     objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
-    split: false,
-    orgId: '408',
+    orgId: '408', split: false, startPrdDe: '201301',
   },
   // 매매거래량
   'DT_408_2006_S0061': {
     itmId: '13103114445T1+13103114445T2+',
     objL: 'objL1=ALL&objL2=ALL&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
-    split: false,
-    orgId: '408',
+    orgId: '408', split: false, startPrdDe: '201301',
   },
   // 중위가격
   'DT_KAB_11672_S18': {
     itmId: 'T001+',
     objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
-    split: false,
-    orgId: '408',
+    orgId: '408', split: false, startPrdDe: '201301',
   },
   // 평균가격
   'DT_KAB_11672_S17': {
     itmId: 'T001+',
     objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
-    split: false,
-    orgId: '408',
+    orgId: '408', split: false, startPrdDe: '201301',
   },
 };
  
@@ -80,19 +72,20 @@ exports.handler = async (event) => {
   const cfg = TBL_CONFIG[tblId];
  
   if (!cfg) {
-    return { statusCode: 400, headers: {'Access-Control-Allow-Origin':'*'}, body: JSON.stringify({error: 'Unknown tblId'}) };
+    return { statusCode: 400, headers: {'Access-Control-Allow-Origin':'*'}, body: JSON.stringify({error:'Unknown tblId'}) };
   }
  
-  const orgId = cfg.orgId || params.orgId || '116';
-  const prdSe = cfg.prdSe || params.prdSe || 'M';
-  const endPrdDe = cfg.endPrdDe || params.endPrdDe || '202612';
+  const orgId = cfg.orgId || '116';
+  const prdSe = cfg.prdSe || 'M';
+  const now = new Date();
+  const defaultEnd = prdSe === 'Y' ? String(now.getFullYear()-1) : `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const endPrdDe = cfg.endPrdDe || defaultEnd;
  
   try {
     let result;
  
     if (cfg.split) {
-      // 40000셀 방지: 5년씩 분할 호출
-      const startYear = parseInt(params.startPrdDe?.slice(0,4) || '2013');
+      const startYear = 2013;
       const endYear = parseInt(endPrdDe.slice(0,4));
       const ranges = [];
       for (let y = startYear; y <= endYear; y += 5) {
@@ -107,7 +100,7 @@ exports.handler = async (event) => {
       }
       result = results.flat();
     } else {
-      const startPrdDe = cfg.startPrdDe || params.startPrdDe || '201301';
+      const startPrdDe = cfg.startPrdDe || '201301';
       const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=${cfg.itmId}&${cfg.objL}&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
       result = await fetchUrl(url);
     }
