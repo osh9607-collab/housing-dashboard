@@ -12,11 +12,11 @@ exports.handler = async (event) => {
   let itmId, objParams;
 
   if (tblId === 'DT_MLTM_1948') {
-    // 주택유형별 - 서울(C1=13102871090A.0003) 고정
+    // 서울(C1) + 다세대/연립/아파트(C2) 고정 → 셀 수 대폭 감소
     itmId = '13103871090T1+';
-    objParams = 'objL1=13102871090A.0003&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=';
+    objParams = 'objL1=13102871090A.0003&objL2=13102871090B.0004+13102871090B.0005+13102871090B.0006&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=';
   } else {
-    // 부문별 - 서울(C3=13102871089C.0002) 고정
+    // 부문별 - 서울(C3) 고정
     itmId = '13103871089T1+';
     objParams = 'objL1=ALL&objL2=ALL&objL3=13102871089C.0002&objL4=&objL5=&objL6=&objL7=&objL8=';
   }
