@@ -489,15 +489,15 @@ async function loadData(){
     doneApt=d3.filter(d=>d.C1_NM==='서울'&&d.C2_NM==='아파트').sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
 
     // 가격지수 (서울, ITM_ID=T1 지수만)
-    priceIdx = d4.filter(d=>d.C1_NM==='서울'&&d.ITM_ID==='T1')
+    priceIdx = d4.filter(d=>d.C1_NM==='서울'&&d.ITM_ID?.trim()==='T1')
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
 
-    // 거래량 (다세대주택+연립 합산, ITM_ID=T1 동(호)수만)
-    const tradeDase = d5.filter(d=>d.C2_NM==='다세대주택'&&d.ITM_ID==='13103114445T1')
+    // 거래량 (다세대주택+연립 합산, ITM_ID T1 동(호)수만)
+    const tradeDase = d5.filter(d=>d.C2_NM==='다세대주택'&&d.ITM_ID?.includes('T1'))
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
-    const tradeYeon = d5.filter(d=>d.C2_NM==='연립주택'&&d.ITM_ID==='13103114445T1')
+    const tradeYeon = d5.filter(d=>d.C2_NM==='연립주택'&&d.ITM_ID?.includes('T1'))
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
-    tradeApt = d5.filter(d=>d.C2_NM==='아파트'&&d.ITM_ID==='13103114445T1')
+    tradeApt = d5.filter(d=>d.C2_NM==='아파트'&&d.ITM_ID?.includes('T1'))
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
     const allTradePrds=[...new Set([...tradeDase,...tradeYeon].map(d=>d.PRD_DE))].sort();
     tradeMulti = allTradePrds.map(prd=>{
