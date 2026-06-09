@@ -494,12 +494,16 @@ async function loadData(){
     // 가격지수 (서울, ITM_ID=T1 지수만)
     priceIdx = d4.filter(d=>d.C1_NM==='서울'&&d.ITM_ID?.trim()==='T1')
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+    console.log('d4 전체:', d4.length, '/ priceIdx 필터 결과:', priceIdx.length);
+    console.log('d4 샘플 C1_NM:', d4[0]?.C1_NM, '/ ITM_ID:', d4[0]?.ITM_ID);
 
     // 거래량 (다세대주택+연립 합산, ITM_ID T1 동(호)수만)
     const tradeDase = d5.filter(d=>d.C2_NM==='다세대주택'&&d.ITM_ID?.includes('T1'))
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
     const tradeYeon = d5.filter(d=>d.C2_NM==='연립주택'&&d.ITM_ID?.includes('T1'))
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+    console.log('d5 전체:', d5.length, '/ tradeDase:', tradeDase.length, '/ tradeYeon:', tradeYeon.length);
+    console.log('d5 샘플 C2_NM:', d5[0]?.C2_NM, '/ ITM_ID:', d5[0]?.ITM_ID);
     tradeApt = d5.filter(d=>d.C2_NM==='아파트'&&d.ITM_ID?.includes('T1'))
       .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
     const allTradePrds=[...new Set([...tradeDase,...tradeYeon].map(d=>d.PRD_DE))].sort();
