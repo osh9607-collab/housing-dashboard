@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>서울 주택건설 인허가실적</title>
+<title>서울 주택 공급 파이프라인 대시보드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
   :root {
     --bg:#0d1117; --surface:#161b22; --border:#21262d;
     --accent:#f0883e; --accent2:#58a6ff; --accent3:#3fb950;
-    --accent4:#ff7b72; --accent5:#d2a8ff;
+    --accent4:#ff7b72; --accent5:#d2a8ff; --accent6:#ffa657;
     --text-primary:#e6edf3; --text-secondary:#8b949e; --text-muted:#484f58;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -38,14 +38,12 @@
 
   .section-bar{padding:14px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface);}
   .section-dot{width:8px;height:8px;border-radius:50%;}
-  .dot-purple{background:var(--accent5);}
-  .dot-blue{background:var(--accent2);}
   .section-label{font-size:12px;color:var(--text-secondary);font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.03em;}
 
   .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
-  .kpi-card{background:var(--bg);padding:22px 28px;}
+  .kpi-card{background:var(--bg);padding:20px 28px;}
   .kpi-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
-  .kpi-value{font-size:28px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+  .kpi-value{font-size:26px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
   .kpi-unit{font-size:13px;color:var(--text-secondary);margin-left:4px;}
   .kpi-change{font-size:12px;margin-top:6px;font-family:'IBM Plex Mono',monospace;}
   .kpi-change.up{color:var(--accent3);}
@@ -53,16 +51,28 @@
   .kpi-change.neutral{color:var(--text-muted);}
 
   .section-body{padding:24px 32px;border-bottom:1px solid var(--border);}
-  .chart-row{display:grid;grid-template-columns:2fr 1fr;gap:24px;margin-bottom:24px;}
-  .chart-row.single{grid-template-columns:1fr;}
+  .chart-row{display:grid;grid-template-columns:2fr 1fr;gap:24px;}
+  .chart-row.triple{grid-template-columns:1fr 1fr 1fr;}
   .chart-panel{}
   .panel-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;}
-  .panel-title{font-size:13px;font-weight:600;color:var(--text-primary);}
+  .panel-title{font-size:13px;font-weight:600;}
   .panel-sub{font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}
-  .chart-wrap{position:relative;height:280px;}
-  .chart-wrap.short{height:220px;}
+  .chart-wrap{position:relative;height:260px;}
+  .chart-wrap.short{height:200px;}
+  .chart-wrap.tall{height:300px;}
+  .mt24{margin-top:24px;}
+  .mt32{margin-top:32px;}
 
-  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:20px;}
+  /* 파이프라인 오버뷰 */
+  .pipeline-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
+  .pipeline-card{background:var(--bg);padding:20px 24px;position:relative;}
+  .pipeline-card::after{content:'→';position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:16px;z-index:1;}
+  .pipeline-card:last-child::after{display:none;}
+  .pipeline-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+  .pipeline-value{font-size:22px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+  .pipeline-sub{font-size:11px;color:var(--text-muted);margin-top:4px;font-family:'IBM Plex Mono',monospace;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;padding:10px 16px;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-weight:400;}
   td{padding:10px 16px;border-bottom:1px solid rgba(33,38,45,.5);font-family:'IBM Plex Mono',monospace;color:var(--text-secondary);}
   tr:hover td{background:rgba(22,27,34,.8);}
@@ -71,12 +81,16 @@
   .badge.up{background:rgba(63,185,80,.15);color:var(--accent3);}
   .badge.down{background:rgba(255,123,114,.15);color:var(--accent4);}
 
+  .raw-section{padding:24px 32px;border-bottom:1px solid var(--border);}
+  .raw-tables{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+
   .footer{padding:16px 32px;display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}
 
-  @media(max-width:768px){
-    .kpi-grid{grid-template-columns:repeat(2,1fr);}
-    .chart-row{grid-template-columns:1fr;}
-    .header,.controls,.section-bar,.section-body,.footer{padding-left:16px;padding-right:16px;}
+  @media(max-width:900px){
+    .kpi-grid,.pipeline-row{grid-template-columns:repeat(2,1fr);}
+    .chart-row,.chart-row.triple,.raw-tables{grid-template-columns:1fr;}
+    .header,.controls,.section-bar,.section-body,.raw-section,.footer{padding-left:16px;padding-right:16px;}
+    .pipeline-card::after{display:none;}
   }
 </style>
 </head>
@@ -84,7 +98,7 @@
 
 <div class="header">
   <div class="header-left">
-    <span class="header-title">서울 주택건설 인허가실적</span>
+    <span class="header-title">서울 주택 공급 파이프라인</span>
     <span class="header-sub">KOSIS · 국토교통부</span>
   </div>
   <span class="last-updated" id="last-updated">—</span>
@@ -92,7 +106,7 @@
 
 <div class="loading-state" id="loading-state">
   <div class="spinner"></div>
-  <div class="loading-text">데이터 불러오는 중...</div>
+  <div class="loading-text">데이터 불러오는 중... (약 10초 소요)</div>
 </div>
 <div class="error-state" id="error-state" style="display:none">
   <div class="error-title">데이터 로드 실패</div>
@@ -112,97 +126,187 @@
     </select>
   </div>
 
-  <!-- ① 다세대주택 차트 -->
+  <!-- 공급 파이프라인 오버뷰 -->
   <div class="section-bar">
-    <span class="section-dot dot-purple"></span>
-    <span class="section-label">서울시 다세대주택 인허가 — 다세대 + 연립 합산 · 월별 순증</span>
+    <span class="section-dot" style="background:var(--text-secondary)"></span>
+    <span class="section-label">공급 파이프라인 오버뷰 — 서울 전체 주택 최근월</span>
   </div>
-  <div class="kpi-grid" id="kpi-multi"></div>
+  <div class="pipeline-row">
+    <div class="pipeline-card">
+      <div class="pipeline-label">① 인허가</div>
+      <div class="pipeline-value" id="pipe-permit" style="color:var(--accent5)">—<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span></div>
+      <div class="pipeline-sub" id="pipe-permit-yoy">—</div>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-label">② 착공</div>
+      <div class="pipeline-value" id="pipe-start" style="color:var(--accent2)">—<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span></div>
+      <div class="pipeline-sub" id="pipe-start-yoy">—</div>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-label">③ 준공</div>
+      <div class="pipeline-value" id="pipe-done" style="color:var(--accent3)">—<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span></div>
+      <div class="pipeline-sub" id="pipe-done-yoy">—</div>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-label">인허가 기준월</div>
+      <div class="pipeline-value" id="pipe-period" style="font-size:18px;color:var(--text-secondary)">—</div>
+      <div class="pipeline-sub">최근 데이터 기준</div>
+    </div>
+  </div>
+
+  <!-- ① 인허가 -->
+  <div class="section-bar">
+    <span class="section-dot" style="background:var(--accent5)"></span>
+    <span class="section-label">① 인허가 — 다세대주택 (다세대+연립) · 월별 순증</span>
+  </div>
+  <div class="kpi-grid" id="kpi-permit"></div>
   <div class="section-body">
     <div class="chart-row">
       <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">월별 인허가 추이</span><span class="panel-sub" id="sub-multi">—</span></div>
-        <div class="chart-wrap"><canvas id="chart-multi-main"></canvas></div>
+        <div class="panel-header"><span class="panel-title">월별 인허가 추이</span><span class="panel-sub" id="sub-permit">—</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-permit-main"></canvas></div>
       </div>
       <div class="chart-panel">
         <div class="panel-header"><span class="panel-title">다세대 / 연립 비중</span><span class="panel-sub">최근 12개월</span></div>
-        <div class="chart-wrap"><canvas id="chart-multi-type"></canvas></div>
+        <div class="chart-wrap tall"><canvas id="chart-permit-type"></canvas></div>
       </div>
     </div>
-    <div class="chart-row" style="margin-top:24px">
+    <div class="chart-row mt24">
       <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">연간 인허가 합계</span><span class="panel-sub">연도별 연간 총 인허가 호수</span></div>
-        <div class="chart-wrap short"><canvas id="chart-multi-annual"></canvas></div>
+        <div class="panel-header"><span class="panel-title">연간 인허가 합계</span><span class="panel-sub">연도별</span></div>
+        <div class="chart-wrap short"><canvas id="chart-permit-annual"></canvas></div>
       </div>
       <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">월별 인허가 (연도 오버레이)</span></div>
-        <div class="chart-wrap short"><canvas id="chart-multi-yoy"></canvas></div>
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap short"><canvas id="chart-permit-yoy"></canvas></div>
       </div>
     </div>
   </div>
 
-  <!-- ② 아파트 차트 -->
+  <!-- ② 착공 -->
   <div class="section-bar">
-    <span class="section-dot dot-blue"></span>
-    <span class="section-label">서울시 아파트 인허가 — 월별 순증</span>
+    <span class="section-dot" style="background:var(--accent2)"></span>
+    <span class="section-label">② 착공 — 다세대주택 (다세대+연립) · 월계</span>
+  </div>
+  <div class="kpi-grid" id="kpi-start"></div>
+  <div class="section-body">
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">월별 착공 추이</span><span class="panel-sub" id="sub-start">—</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-start-main"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">다세대 / 연립 비중</span><span class="panel-sub">최근 12개월</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-start-type"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row mt24">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연간 착공 합계</span><span class="panel-sub">연도별</span></div>
+        <div class="chart-wrap short"><canvas id="chart-start-annual"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap short"><canvas id="chart-start-yoy"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 준공 -->
+  <div class="section-bar">
+    <span class="section-dot" style="background:var(--accent3)"></span>
+    <span class="section-label">③ 준공 — 다세대주택 (다세대+연립) · 월계</span>
+  </div>
+  <div class="kpi-grid" id="kpi-done"></div>
+  <div class="section-body">
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">월별 준공 추이</span><span class="panel-sub" id="sub-done">—</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-done-main"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">다세대 / 연립 비중</span><span class="panel-sub">최근 12개월</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-done-type"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row mt24">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연간 준공 합계</span><span class="panel-sub">연도별</span></div>
+        <div class="chart-wrap short"><canvas id="chart-done-annual"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap short"><canvas id="chart-done-yoy"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 아파트 인허가 -->
+  <div class="section-bar">
+    <span class="section-dot" style="background:var(--accent)"></span>
+    <span class="section-label">④ 아파트 인허가 — 월별 순증</span>
   </div>
   <div class="kpi-grid" id="kpi-apt"></div>
   <div class="section-body">
     <div class="chart-row">
       <div class="chart-panel">
         <div class="panel-header"><span class="panel-title">월별 인허가 추이</span><span class="panel-sub" id="sub-apt">—</span></div>
-        <div class="chart-wrap"><canvas id="chart-apt-main"></canvas></div>
+        <div class="chart-wrap tall"><canvas id="chart-apt-main"></canvas></div>
       </div>
       <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">월별 인허가 (연도 오버레이)</span></div>
-        <div class="chart-wrap"><canvas id="chart-apt-yoy"></canvas></div>
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-apt-yoy"></canvas></div>
       </div>
     </div>
-    <div class="chart-row" style="margin-top:24px">
+    <div class="chart-row mt24">
       <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">연간 인허가 합계</span><span class="panel-sub">연도별 연간 총 인허가 호수</span></div>
+        <div class="panel-header"><span class="panel-title">연간 인허가 합계</span><span class="panel-sub">연도별</span></div>
         <div class="chart-wrap short"><canvas id="chart-apt-annual"></canvas></div>
       </div>
       <div></div>
     </div>
   </div>
 
-  <!-- ③ RAW 데이터 (맨 아래) -->
-  <div class="section-bar" style="margin-top:0">
+  <!-- RAW 데이터 -->
+  <div class="section-bar">
     <span class="section-dot" style="background:var(--text-muted)"></span>
-    <span class="section-label">RAW 데이터</span>
+    <span class="section-label">RAW 데이터 — 최근 18개월</span>
   </div>
-  <div class="section-body">
-    <div style="margin-bottom:32px">
-      <div class="panel-header" style="margin-bottom:12px">
-        <span class="panel-title" style="color:var(--accent5)">■ 다세대주택 인허가</span>
-        <span class="panel-sub">최근 18개월</span>
+  <div class="raw-section">
+    <div class="raw-tables">
+      <div>
+        <div class="panel-header" style="margin-bottom:12px">
+          <span class="panel-title" style="color:var(--accent5)">■ 다세대주택 인허가</span>
+        </div>
+        <table><thead><tr><th>기준월</th><th style="color:var(--accent5)">인허가(호)</th><th>전월비</th><th>전년동월비</th><th>3M 이동평균</th></tr></thead>
+        <tbody id="table-permit"></tbody></table>
       </div>
-      <table>
-        <thead><tr>
-          <th>기준월</th><th style="color:var(--accent5)">인허가 (호)</th>
-          <th>전월비</th><th>전년동월비</th><th>3개월 이동평균</th>
-        </tr></thead>
-        <tbody id="table-multi"></tbody>
-      </table>
-    </div>
-    <div>
-      <div class="panel-header" style="margin-bottom:12px">
-        <span class="panel-title" style="color:var(--accent2)">■ 아파트 인허가</span>
-        <span class="panel-sub">최근 18개월</span>
+      <div>
+        <div class="panel-header" style="margin-bottom:12px">
+          <span class="panel-title" style="color:var(--accent2)">■ 다세대주택 착공</span>
+        </div>
+        <table><thead><tr><th>기준월</th><th style="color:var(--accent2)">착공(호)</th><th>전월비</th><th>전년동월비</th><th>3M 이동평균</th></tr></thead>
+        <tbody id="table-start"></tbody></table>
       </div>
-      <table>
-        <thead><tr>
-          <th>기준월</th><th style="color:var(--accent2)">인허가 (호)</th>
-          <th>전월비</th><th>전년동월비</th><th>3개월 이동평균</th>
-        </tr></thead>
-        <tbody id="table-apt"></tbody>
-      </table>
+      <div>
+        <div class="panel-header" style="margin-bottom:12px">
+          <span class="panel-title" style="color:var(--accent3)">■ 다세대주택 준공</span>
+        </div>
+        <table><thead><tr><th>기준월</th><th style="color:var(--accent3)">준공(호)</th><th>전월비</th><th>전년동월비</th><th>3M 이동평균</th></tr></thead>
+        <tbody id="table-done"></tbody></table>
+      </div>
+      <div>
+        <div class="panel-header" style="margin-bottom:12px">
+          <span class="panel-title" style="color:var(--accent)">■ 아파트 인허가</span>
+        </div>
+        <table><thead><tr><th>기준월</th><th style="color:var(--accent)">인허가(호)</th><th>전월비</th><th>전년동월비</th><th>3M 이동평균</th></tr></thead>
+        <tbody id="table-apt"></tbody></table>
+      </div>
     </div>
   </div>
 
   <div class="footer">
-    <span>출처: 국토교통부 「주택건설 인허가실적」 · KOSIS Open API</span>
+    <span>출처: 국토교통부 「주택건설 인허가·착공·준공실적」 · KOSIS Open API</span>
     <span id="footer-period">—</span>
   </div>
 </div>
@@ -212,66 +316,83 @@ const PROXY = '/.netlify/functions/kosis-proxy';
 const YEAR_COLORS = ['#f0883e','#58a6ff','#3fb950','#d2a8ff','#ff7b72','#79c0ff'];
 const charts = {};
 
-let multiData = [];
-let daseData = [];
-let yeonData = [];
-let aptData = [];
+// 데이터
+let permitMulti=[], permitDase=[], permitYeon=[], permitApt=[];
+let startMulti=[], startDase=[], startYeon=[];
+let doneMulti=[], doneDase=[], doneYeon=[];
 
-function fmt(n){ return (n==null||isNaN(n))?'—':Math.round(n).toLocaleString('ko-KR'); }
-function fmtPct(n){ return (n==null||isNaN(n))?'—':(n>=0?'+':'')+n.toFixed(1)+'%'; }
+function fmt(n){ return(n==null||isNaN(n))?'—':Math.round(n).toLocaleString('ko-KR'); }
+function fmtPct(n){ return(n==null||isNaN(n))?'—':(n>=0?'+':'')+n.toFixed(1)+'%'; }
 
-function cumToMonthly(sorted) {
-  return sorted.map((d,i,arr) => {
-    const month = parseInt(d.PRD_DE.slice(4,6));
-    const val = parseFloat(d.DT)||0;
-    if (month === 1) return {...d, DT: String(val)};
-    const prev = parseFloat(arr[i-1]?.DT)||0;
-    return {...d, DT: String(Math.max(0, val-prev))};
+// 누계 → 월별 순증
+function cumToMonthly(sorted){
+  return sorted.map((d,i,arr)=>{
+    const m=parseInt(d.PRD_DE.slice(4,6));
+    const v=parseFloat(d.DT)||0;
+    if(m===1) return{...d,DT:String(v)};
+    const p=parseFloat(arr[i-1]?.DT)||0;
+    return{...d,DT:String(Math.max(0,v-p))};
   });
 }
 
-async function loadData() {
+// 유형별 분리 + 합산
+function processTypeData(raw, types, isCumulative){
+  const byType={};
+  raw.filter(d=>d.C1_NM==='서울'&&types.includes(d.C2_NM))
+    .forEach(d=>{(byType[d.C2_NM]||(byType[d.C2_NM]=[])).push(d);});
+  Object.keys(byType).forEach(k=>{
+    byType[k].sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+    if(isCumulative) byType[k]=cumToMonthly(byType[k]);
+  });
+  const t1=byType[types[0]]||[];
+  const t2=byType[types[1]]||[];
+  const allPrds=[...new Set([...t1,...t2].map(d=>d.PRD_DE))].sort();
+  const combined=allPrds.map(prd=>{
+    const a=parseFloat(t1.find(d=>d.PRD_DE===prd)?.DT)||0;
+    const b=parseFloat(t2.find(d=>d.PRD_DE===prd)?.DT)||0;
+    return{PRD_DE:prd,DT:String(a+b)};
+  });
+  return{t1,t2,combined};
+}
+
+async function loadData(){
   document.getElementById('loading-state').style.display='flex';
   document.getElementById('error-state').style.display='none';
   document.getElementById('main-content').style.display='none';
 
-  const now = new Date();
-  const endPrd = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
-
   try {
-    const res = await fetch(`${PROXY}?orgId=116&tblId=DT_MLTM_1948&prdSe=M&endPrdDe=${endPrd}`);
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if(!Array.isArray(data)) throw new Error(data?.errMsg||'데이터 오류');
+    const [r1,r2,r3]=await Promise.all([
+      fetch(`${PROXY}?tblId=DT_MLTM_1948`),
+      fetch(`${PROXY}?tblId=DT_MLTM_5387`),
+      fetch(`${PROXY}?tblId=DT_MLTM_5373`),
+    ]);
+    if(!r1.ok||!r2.ok||!r3.ok) throw new Error('HTTP 오류');
+    const [d1,d2,d3]=await Promise.all([r1.json(),r2.json(),r3.json()]);
+    if(!Array.isArray(d1)) throw new Error(d1?.errMsg||'인허가 오류');
+    if(!Array.isArray(d2)) throw new Error(d2?.errMsg||'착공 오류');
+    if(!Array.isArray(d3)) throw new Error(d3?.errMsg||'준공 오류');
 
-    const byType = {};
-    data.filter(d => d.C1_NM==='서울' && ['다세대','연립','아파트'].includes(d.C2_NM))
-      .forEach(d => { (byType[d.C2_NM]||(byType[d.C2_NM]=[])).push(d); });
+    // 인허가 (누계→순증)
+    const p=processTypeData(d1,['다세대','연립'],true);
+    permitDase=p.t1; permitYeon=p.t2; permitMulti=p.combined;
+    permitApt=d1.filter(d=>d.C1_NM==='서울'&&d.C2_NM==='아파트').sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+    permitApt=cumToMonthly(permitApt);
 
-    Object.keys(byType).forEach(k => {
-      byType[k].sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
-      byType[k] = cumToMonthly(byType[k]);
-    });
+    // 착공 (월계 - 변환 불필요)
+    const s=processTypeData(d2,['다세대','연립'],false);
+    startDase=s.t1; startYeon=s.t2; startMulti=s.combined;
 
-    daseData = byType['다세대']||[];
-    yeonData = byType['연립']||[];
-    aptData  = byType['아파트']||[];
+    // 준공 (월계 - 변환 불필요)
+    const dn=processTypeData(d3,['다세대','연립'],false);
+    doneDase=dn.t1; doneYeon=dn.t2; doneMulti=dn.combined;
 
-    // 다세대+연립 합산
-    const allPrds = [...new Set([...daseData,...yeonData].map(d=>d.PRD_DE))].sort();
-    multiData = allPrds.map(prd => {
-      const a = parseFloat(daseData.find(d=>d.PRD_DE===prd)?.DT)||0;
-      const b = parseFloat(yeonData.find(d=>d.PRD_DE===prd)?.DT)||0;
-      return {PRD_DE:prd, DT:String(a+b)};
-    });
-
-    document.getElementById('last-updated').textContent =
+    document.getElementById('last-updated').textContent=
       `갱신: ${new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
     document.getElementById('loading-state').style.display='none';
     document.getElementById('main-content').style.display='block';
     updateAll();
 
-  } catch(e) {
+  } catch(e){
     document.getElementById('loading-state').style.display='none';
     document.getElementById('error-state').style.display='flex';
     document.getElementById('error-msg').textContent=`오류: ${e.message}`;
@@ -281,68 +402,89 @@ async function loadData() {
 function getRange(){ return parseInt(document.getElementById('range-select').value); }
 function applyRange(data){ const n=getRange(); return n===0?data:data.slice(-n); }
 
-function updateAll() {
-  if(!multiData.length) return;
-  renderSection('multi', multiData, '#d2a8ff', '#58a6ff');
-  renderSection('apt',   aptData,   '#58a6ff', '#f0883e');
-
-  const p = multiData;
-  document.getElementById('footer-period').textContent =
+function updateAll(){
+  if(!permitMulti.length) return;
+  updatePipeline();
+  renderSection('permit',permitMulti,permitDase,permitYeon,'#d2a8ff','#58a6ff',true);
+  renderSection('start',startMulti,startDase,startYeon,'#58a6ff','#3fb950',false);
+  renderSection('done',doneMulti,doneDase,doneYeon,'#3fb950','#f0883e',false);
+  renderAptSection();
+  renderRawTable('table-permit',permitMulti,'#d2a8ff');
+  renderRawTable('table-start',startMulti,'#58a6ff');
+  renderRawTable('table-done',doneMulti,'#3fb950');
+  renderRawTable('table-apt',permitApt,'#f0883e');
+  const p=permitMulti;
+  document.getElementById('footer-period').textContent=
     `수록기간: ${p[0].PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2')} ~ ${p[p.length-1].PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2')}`;
 }
 
-function renderKPI(id, data, color) {
-  const last = parseFloat(data[data.length-1]?.DT)||0;
-  const prev = parseFloat(data[data.length-2]?.DT)||0;
-  const yoyIdx = data.length-13;
-  const yoyVal = yoyIdx>=0?(parseFloat(data[yoyIdx]?.DT)||0):null;
-  const latestYear = data[data.length-1].PRD_DE.slice(0,4);
-  const prevYear = String(parseInt(latestYear)-1);
-  const latestMonth = parseInt(data[data.length-1].PRD_DE.slice(4,6));
-  const ytd = data.filter(d=>d.PRD_DE.startsWith(latestYear)&&parseInt(d.PRD_DE.slice(4,6))<=latestMonth).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
-  const ytdPrev = data.filter(d=>d.PRD_DE.startsWith(prevYear)&&parseInt(d.PRD_DE.slice(4,6))<=latestMonth).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
-  const avg12 = data.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/Math.min(data.length,12);
-  const momPct = prev?((last-prev)/prev*100):null;
-  const yoyPct = yoyVal?((last-yoyVal)/yoyVal*100):null;
-  const ytdPct = ytdPrev?((ytd-ytdPrev)/ytdPrev*100):null;
+function updatePipeline(){
+  const pLast=permitMulti[permitMulti.length-1];
+  const pPrd=pLast.PRD_DE;
+  const sLast=startMulti.find(d=>d.PRD_DE===pPrd);
+  const dLast=doneMulti.find(d=>d.PRD_DE===pPrd);
+  const yoyIdx=d=>d?permitMulti.indexOf(permitMulti.find(x=>x.PRD_DE===d.PRD_DE))-12:null;
 
-  document.getElementById(id).innerHTML = `
-    <div class="kpi-card">
-      <div class="kpi-label">최근월 인허가</div>
-      <div class="kpi-value" style="color:${color}">${fmt(last)}<span class="kpi-unit">호</span></div>
-      <div class="kpi-change ${momPct>0?'up':momPct<0?'down':'neutral'}">${momPct!==null?`전월 대비 ${fmtPct(momPct)}`:'—'}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">전년 동월 대비</div>
-      <div class="kpi-value" style="color:${yoyPct>0?'#3fb950':yoyPct<0?'#ff7b72':color}">${yoyPct!==null?fmtPct(yoyPct).replace('%',''):'—'}<span class="kpi-unit">%</span></div>
-      <div class="kpi-change neutral">${yoyVal!==null?`전년 동월 ${fmt(yoyVal)}호`:'—'}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">연간 누계 (당해)</div>
-      <div class="kpi-value" style="color:${color}">${fmt(ytd)}<span class="kpi-unit">호</span></div>
-      <div class="kpi-change ${ytdPct>0?'up':ytdPct<0?'down':'neutral'}">${ytdPct!==null?`전년 동기 ${fmtPct(ytdPct)}`:'—'}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">12개월 평균</div>
-      <div class="kpi-value" style="color:${color}">${fmt(avg12)}<span class="kpi-unit">호</span></div>
-      <div class="kpi-change neutral">최근 12개월 평균</div>
-    </div>`;
+  const pv=parseFloat(pLast.DT)||0;
+  const sv=parseFloat(sLast?.DT)||0;
+  const dv=parseFloat(dLast?.DT)||0;
+
+  const pyoy=permitMulti[permitMulti.length-13];
+  const syoy=startMulti[startMulti.length-13];
+  const dyoy=doneMulti[doneMulti.length-13];
+
+  document.getElementById('pipe-permit').innerHTML=`${fmt(pv)}<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span>`;
+  document.getElementById('pipe-start').innerHTML=`${fmt(sv)}<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span>`;
+  document.getElementById('pipe-done').innerHTML=`${fmt(dv)}<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span>`;
+  document.getElementById('pipe-period').textContent=pPrd.replace(/(\d{4})(\d{2})/,'$1년 $2월');
+
+  const calcYoy=(v,prev)=>prev?(v-parseFloat(prev.DT))/parseFloat(prev.DT)*100:null;
+  const pyoyPct=calcYoy(pv,pyoy);
+  const syoyPct=calcYoy(sv,syoy);
+  const dyoyPct=calcYoy(dv,dyoy);
+
+  document.getElementById('pipe-permit-yoy').textContent=pyoyPct!==null?`전년동월比 ${fmtPct(pyoyPct)}`:'—';
+  document.getElementById('pipe-start-yoy').textContent=syoyPct!==null?`전년동월比 ${fmtPct(syoyPct)}`:'—';
+  document.getElementById('pipe-done-yoy').textContent=dyoyPct!==null?`전년동월比 ${fmtPct(dyoyPct)}`:'—';
 }
 
-function renderBarLine(canvasId, labels, values, barColor, lineColor) {
-  const ma3 = values.map((v,i,a)=>i<2?null:(a[i]+a[i-1]+a[i-2])/3);
-  if(charts[canvasId]) charts[canvasId].destroy();
-  charts[canvasId] = new Chart(document.getElementById(canvasId).getContext('2d'),{
+function renderKPI(id,data,color){
+  const last=parseFloat(data[data.length-1]?.DT)||0;
+  const prev=parseFloat(data[data.length-2]?.DT)||0;
+  const yoyIdx=data.length-13;
+  const yoyVal=yoyIdx>=0?(parseFloat(data[yoyIdx]?.DT)||0):null;
+  const latestYear=data[data.length-1].PRD_DE.slice(0,4);
+  const prevYear=String(parseInt(latestYear)-1);
+  const lm=parseInt(data[data.length-1].PRD_DE.slice(4,6));
+  const ytd=data.filter(d=>d.PRD_DE.startsWith(latestYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  const ytdPrev=data.filter(d=>d.PRD_DE.startsWith(prevYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  const avg12=data.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/Math.min(data.length,12);
+  const momPct=prev?((last-prev)/prev*100):null;
+  const yoyPct=yoyVal?((last-yoyVal)/yoyVal*100):null;
+  const ytdPct=ytdPrev?((ytd-ytdPrev)/ytdPrev*100):null;
+  document.getElementById(id).innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">최근월</div><div class="kpi-value" style="color:${color}">${fmt(last)}<span class="kpi-unit">호</span></div>
+    <div class="kpi-change ${momPct>0?'up':momPct<0?'down':'neutral'}">${momPct!==null?`전월 ${fmtPct(momPct)}`:'—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">전년동월비</div><div class="kpi-value" style="color:${yoyPct>0?'#3fb950':yoyPct<0?'#ff7b72':color}">${yoyPct!==null?fmtPct(yoyPct).replace('%',''):'—'}<span class="kpi-unit">%</span></div>
+    <div class="kpi-change neutral">${yoyVal!==null?`전년 동월 ${fmt(yoyVal)}호`:'—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">연간 누계 (당해)</div><div class="kpi-value" style="color:${color}">${fmt(ytd)}<span class="kpi-unit">호</span></div>
+    <div class="kpi-change ${ytdPct>0?'up':ytdPct<0?'down':'neutral'}">${ytdPct!==null?`전년동기 ${fmtPct(ytdPct)}`:'—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">12개월 평균</div><div class="kpi-value" style="color:${color}">${fmt(avg12)}<span class="kpi-unit">호</span></div>
+    <div class="kpi-change neutral">최근 12개월</div></div>`;
+}
+
+function renderBarLine(id,labels,values,barColor,lineColor){
+  const ma3=values.map((v,i,a)=>i<2?null:(a[i]+a[i-1]+a[i-2])/3);
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
     data:{labels,datasets:[
-      {type:'bar',label:'인허가 호수',data:values,backgroundColor:`${barColor}70`,borderColor:barColor,borderWidth:1,borderRadius:2,yAxisID:'y'},
+      {type:'bar',label:'호수',data:values,backgroundColor:`${barColor}70`,borderColor:barColor,borderWidth:1,borderRadius:2,yAxisID:'y'},
       {type:'line',label:'3개월 이동평균',data:ma3,borderColor:lineColor,borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
+      plugins:{legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
-          callbacks:{label:c=>` ${c.dataset.label}: ${c.raw!==null?fmt(c.raw)+'호':'—'}`}}
-      },
+          callbacks:{label:c=>` ${c.dataset.label}: ${c.raw!==null?fmt(c.raw)+'호':'—'}`}}},
       scales:{
         x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
         y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}
@@ -350,139 +492,103 @@ function renderBarLine(canvasId, labels, values, barColor, lineColor) {
   });
 }
 
-function renderDoughnut(canvasId, labels, values, colors) {
-  if(charts[canvasId]) charts[canvasId].destroy();
-  const total = values.reduce((a,b)=>a+b,0);
-  charts[canvasId] = new Chart(document.getElementById(canvasId).getContext('2d'),{
+function renderDoughnut(id,labels,values,colors){
+  if(charts[id]) charts[id].destroy();
+  const total=values.reduce((a,b)=>a+b,0);
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
     type:'doughnut',
     data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
-      plugins:{
-        legend:{position:'bottom',labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:10,padding:12}},
+      plugins:{legend:{position:'bottom',labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:10,padding:12}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,
-          callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}호 (${total?(c.raw/total*100).toFixed(1):0}%)`}}
-      }}
+          callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}호 (${total?(c.raw/total*100).toFixed(1):0}%)`}}}}
   });
 }
 
-function renderYoY(canvasId, data) {
-  const years = [...new Set(data.map(d=>d.PRD_DE.slice(0,4)))].sort().slice(-6);
-  const datasets = years.map((year,yi)=>{
-    const isLatest = yi===years.length-1;
-    const color = YEAR_COLORS[yi%YEAR_COLORS.length];
-    return {label:year,
-      data:Array.from({length:12},(_,i)=>{
-        const m=String(i+1).padStart(2,'0');
-        const f=data.find(d=>d.PRD_DE===`${year}${m}`);
-        return f?(parseFloat(f.DT)||null):null;
-      }),
-      borderColor:color,backgroundColor:'transparent',
-      borderWidth:isLatest?2.5:1.5,pointRadius:isLatest?3:1,
-      pointBackgroundColor:color,tension:0.3};
+function renderAnnual(id,data,barColor){
+  const yearMap={};
+  data.forEach(d=>{const y=d.PRD_DE.slice(0,4);yearMap[y]=(yearMap[y]||0)+(parseFloat(d.DT)||0);});
+  const years=Object.keys(yearMap).sort();
+  const curY=String(new Date().getFullYear());
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
+    type:'bar',
+    data:{labels:years.map(y=>y+'년'),datasets:[{label:'연간합계',data:years.map(y=>yearMap[y]),
+      backgroundColor:years.map(y=>y===curY?`${barColor}40`:`${barColor}90`),
+      borderColor:years.map(y=>y===curY?barColor+'99':barColor),borderWidth:years.map(y=>y===curY?1.5:0),borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
+        callbacks:{label:c=>` ${c.label.replace('년','')}: ${fmt(c.raw)}호${c.label.includes(curY)?' (진행중)':''}`}}},
+      scales:{x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}}}
   });
-  if(charts[canvasId]) charts[canvasId].destroy();
-  charts[canvasId] = new Chart(document.getElementById(canvasId).getContext('2d'),{
+}
+
+function renderYoY(id,data){
+  const years=[...new Set(data.map(d=>d.PRD_DE.slice(0,4)))].sort().slice(-6);
+  const datasets=years.map((year,yi)=>{
+    const isLatest=yi===years.length-1;
+    const color=YEAR_COLORS[yi%YEAR_COLORS.length];
+    return{label:year,data:Array.from({length:12},(_,i)=>{const m=String(i+1).padStart(2,'0');const f=data.find(d=>d.PRD_DE===`${year}${m}`);return f?(parseFloat(f.DT)||null):null;}),
+      borderColor:color,backgroundColor:'transparent',borderWidth:isLatest?2.5:1.5,pointRadius:isLatest?3:1,pointBackgroundColor:color,tension:0.3};
+  });
+  if(charts[id]) charts[id].destroy();
+  charts[id]=new Chart(document.getElementById(id).getContext('2d'),{
     type:'line',
     data:{labels:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],datasets},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:20}},
+      plugins:{legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:20}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,
-          callbacks:{label:c=>c.raw!==null?` ${c.dataset.label}년: ${fmt(c.raw)}호`:` ${c.dataset.label}년: —`}}
-      },
-      scales:{
-        x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
-        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}
-      }}
+          callbacks:{label:c=>c.raw!==null?` ${c.dataset.label}년: ${fmt(c.raw)}호`:` ${c.dataset.label}년: —`}}},
+      scales:{x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}}}
   });
 }
 
-function renderTable(tbodyId, data, color) {
-  const recent = data.slice(-18).reverse();
-  const tbody = document.getElementById(tbodyId);
-  tbody.innerHTML = '';
+function renderSection(key,combined,t1,t2,barColor,lineColor){
+  const ranged=applyRange(combined);
+  const labels=ranged.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
+  const values=ranged.map(d=>parseFloat(d.DT)||0);
+  renderKPI(`kpi-${key}`,combined,barColor);
+  renderBarLine(`chart-${key}-main`,labels,values,barColor,lineColor);
+  document.getElementById(`sub-${key}`).textContent=`${labels[0]} ~ ${labels[labels.length-1]}`;
+  const s1=t1.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  const s2=t2.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  renderDoughnut(`chart-${key}-type`,['다세대','연립'],[s1,s2],[barColor,lineColor]);
+  renderAnnual(`chart-${key}-annual`,combined,barColor);
+  renderYoY(`chart-${key}-yoy`,combined);
+}
+
+function renderAptSection(){
+  const ranged=applyRange(permitApt);
+  const labels=ranged.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
+  const values=ranged.map(d=>parseFloat(d.DT)||0);
+  renderKPI('kpi-apt',permitApt,'#f0883e');
+  renderBarLine('chart-apt-main',labels,values,'#f0883e','#58a6ff');
+  document.getElementById('sub-apt').textContent=`${labels[0]} ~ ${labels[labels.length-1]}`;
+  renderAnnual('chart-apt-annual',permitApt,'#f0883e');
+  renderYoY('chart-apt-yoy',permitApt);
+}
+
+function renderRawTable(tbodyId,data,color){
+  const recent=data.slice(-18).reverse();
+  const tbody=document.getElementById(tbodyId);
+  tbody.innerHTML='';
   recent.forEach((row,i)=>{
-    const val = parseFloat(row.DT)||0;
-    const prevVal = data[data.length-i-2]?(parseFloat(data[data.length-i-2].DT)||0):null;
-    const yoyVal = data[data.length-i-14]?(parseFloat(data[data.length-i-14].DT)||0):null;
-    const slice3 = data.slice(Math.max(0,data.length-i-3),data.length-i);
-    const ma = slice3.length?slice3.reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/slice3.length:null;
-    const momPct = prevVal!==null?((val-prevVal)/prevVal*100):null;
-    const yoyPct = yoyVal!==null?((val-yoyVal)/yoyVal*100):null;
-    const period = row.PRD_DE.replace(/(\d{4})(\d{2})/,'$1년 $2월');
+    const val=parseFloat(row.DT)||0;
+    const prevVal=data[data.length-i-2]?(parseFloat(data[data.length-i-2].DT)||0):null;
+    const yoyVal=data[data.length-i-14]?(parseFloat(data[data.length-i-14].DT)||0):null;
+    const slice3=data.slice(Math.max(0,data.length-i-3),data.length-i);
+    const ma=slice3.length?slice3.reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/slice3.length:null;
+    const momPct=prevVal!==null?((val-prevVal)/prevVal*100):null;
+    const yoyPct=yoyVal!==null?((val-yoyVal)/yoyVal*100):null;
     tbody.innerHTML+=`<tr>
-      <td>${period}</td>
+      <td>${row.PRD_DE.replace(/(\d{4})(\d{2})/,'$1년 $2월')}</td>
       <td style="color:${color};font-weight:600">${fmt(val)}</td>
       <td>${momPct!==null?`<span class="badge ${momPct>=0?'up':'down'}">${fmtPct(momPct)}</span>`:'—'}</td>
       <td>${yoyPct!==null?`<span class="badge ${yoyPct>=0?'up':'down'}">${fmtPct(yoyPct)}</span>`:'—'}</td>
       <td>${ma!==null?fmt(ma):'—'}</td></tr>`;
   });
-}
-
-function renderAnnual(canvasId, data, barColor) {
-  // 연도별 합산 (진행중인 연도 포함, 단 현재연도는 점선 처리)
-  const yearMap = {};
-  data.forEach(d => {
-    const y = d.PRD_DE.slice(0,4);
-    yearMap[y] = (yearMap[y]||0) + (parseFloat(d.DT)||0);
-  });
-  const years = Object.keys(yearMap).sort();
-  const currentYear = String(new Date().getFullYear());
-  const values = years.map(y => yearMap[y]);
-
-  if(charts[canvasId]) charts[canvasId].destroy();
-  charts[canvasId] = new Chart(document.getElementById(canvasId).getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: years.map(y => y+'년'),
-      datasets: [{
-        label: '연간 인허가',
-        data: values,
-        backgroundColor: years.map(y => y===currentYear ? `${barColor}40` : `${barColor}90`),
-        borderColor: years.map(y => y===currentYear ? barColor+'99' : barColor),
-        borderWidth: years.map(y => y===currentYear ? 1.5 : 0),
-        borderRadius: 3,
-        borderDash: [],
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#161b22', borderColor: '#21262d', borderWidth: 1,
-          titleColor: '#e6edf3', bodyColor: '#8b949e',
-          callbacks: {
-            label: c => ` ${c.label.replace('년','')}: ${fmt(c.raw)}호${c.label.includes(currentYear)?' (진행중)':''}`
-          }
-        },
-        annotation: {}
-      },
-      scales: {
-        x: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' } }, grid: { color: 'rgba(33,38,45,.8)' } },
-        y: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' }, callback: v => v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString() }, grid: { color: 'rgba(33,38,45,.8)' } }
-      }
-    }
-  });
-}
-
-function renderSection(key, data, barColor, lineColor) {
-  const ranged = applyRange(data);
-  const labels = ranged.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
-  const values = ranged.map(d=>parseFloat(d.DT)||0);
-
-  renderKPI(`kpi-${key}`, data, barColor);
-  renderBarLine(`chart-${key}-main`, labels, values, barColor, lineColor);
-  document.getElementById(`sub-${key}`).textContent = `${labels[0]} ~ ${labels[labels.length-1]}`;
-  renderAnnual(`chart-${key}-annual`, data, barColor);
-  renderYoY(`chart-${key}-yoy`, data);
-  renderTable(`table-${key}`, data, barColor);
-
-  if(key==='multi') {
-    const daseSum = daseData.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
-    const yeonSum = yeonData.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
-    renderDoughnut('chart-multi-type', ['다세대','연립'], [daseSum,yeonSum], ['#d2a8ff','#58a6ff']);
-  }
 }
 
 loadData();
