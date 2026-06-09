@@ -10,23 +10,7 @@ exports.handler = async (event) => {
   const endPrdDe = params.endPrdDe || '202612';
   const API_KEY = 'MTI0YzJmMjQzNTg1OGQwYzczNTEzYmY2NDk3MGQxY2Q=';
 
-  const query = new URLSearchParams({
-    method: 'getList',
-    apiKey: API_KEY,
-    itmId: 'ALL',
-    objL1: 'ALL',
-    objL2: 'ALL',
-    objL3: '', objL4: '', objL5: '', objL6: '', objL7: '', objL8: '',
-    format: 'json',
-    jsonVD: 'Y',
-    prdSe,
-    startPrdDe,
-    endPrdDe,
-    orgId,
-    tblId,
-  });
-
-  const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?${query}`;
+  const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=ALL&objL1=ALL&objL2=ALL&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
 
   return new Promise((resolve) => {
     https.get(url, (res) => {
