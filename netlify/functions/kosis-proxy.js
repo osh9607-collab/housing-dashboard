@@ -10,7 +10,7 @@ exports.handler = async (event) => {
   const endPrdDe = params.endPrdDe || '202612';
   const API_KEY = 'MTI0YzJmMjQzNTg1OGQwYzczNTEzYmY2NDk3MGQxY2Q=';
 
-  const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=ALL&objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
+  const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=ALL&objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&newEstPrdCnt=12&orgId=${orgId}&tblId=${tblId}`;
 
   return new Promise((resolve) => {
     https.get(url, (res) => {
@@ -30,7 +30,7 @@ exports.handler = async (event) => {
         } catch(e) {
           resolve({
             statusCode: 500,
-            body: JSON.stringify({ error: 'parse failed', raw: data.slice(0, 200) }),
+            body: JSON.stringify({ error: 'parse failed', raw: data.slice(0, 500) }),
           });
         }
       });
