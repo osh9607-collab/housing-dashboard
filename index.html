@@ -327,13 +327,9 @@
   <div class="kpi-grid" id="kpi-price"></div>
   <div class="section-body">
     <div class="chart-row">
-      <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">연립다세대 매매 실거래가격지수</span><span class="panel-sub">2017.11 = 100</span></div>
-        <div class="chart-wrap tall"><canvas id="chart-price-idx"></canvas></div>
-      </div>
-      <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">다세대+연립 매매거래량</span><span class="panel-sub" id="sub-trade">—</span></div>
-        <div class="chart-wrap tall"><canvas id="chart-trade"></canvas></div>
+      <div class="chart-panel" style="grid-column:1/-1">
+        <div class="panel-header"><span class="panel-title">매매 가격지수 + 다세대+연립 거래량</span><span class="panel-sub" id="sub-trade">—</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-combo"></canvas></div>
       </div>
     </div>
     <div class="chart-row mt24">
@@ -512,6 +508,8 @@ async function loadData(){
       const b=parseFloat(tradeYeon.find(d=>d.PRD_DE===prd)?.DT)||0;
       return{PRD_DE:prd, DT:String(a+b)};
     });
+
+    document.getElementById('last-updated').textContent=
       `갱신: ${new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
     document.getElementById('loading-state').style.display='none';
     document.getElementById('main-content').style.display='block';
@@ -734,34 +732,37 @@ function renderPriceSection(){
       <div class="kpi-value" style="color:#d2a8ff">${fmt(avg12)}<span class="kpi-unit">건</span></div>
       <div class="kpi-change neutral">최근 12개월</div></div>`;
 
-  // 가격지수 라인차트
-  const ranged=applyRange(priceIdx);
-  const idxLabels=ranged.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
-  const idxValues=ranged.map(d=>parseFloat(d.DT)||0);
-  if(charts['chart-price-idx']) charts['chart-price-idx'].destroy();
-  charts['chart-price-idx']=new Chart(document.getElementById('chart-price-idx').getContext('2d'),{
-    type:'line',
-    data:{labels:idxLabels,datasets:[{
-      label:'매매 가격지수',data:idxValues,
-      borderColor:'#d2a8ff',backgroundColor:'rgba(210,168,255,0.1)',
-      borderWidth:2,pointRadius:0,tension:0.3,fill:true
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
+  // 가격지수 + 거래량 콤보 차트 (이중축)
+  const rangedP=applyRange(priceIdx);
+  const rangedT=applyRange(tradeMulti);
+  // 공통 기간으로 맞춤
+  const comboLabels=rangedT.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
+  const tradeValues=rangedT.map(d=>parseFloat(d.DT)||0);
+  const idxValues=rangedT.map(d=>{
+    const found=priceIdx.find(p=>p.PRD_DE===d.PRD_DE);
+    return found?parseFloat(found.DT):null;
+  });
+  document.getElementById('sub-trade').textContent=`${comboLabels[0]} ~ ${comboLabels[comboLabels.length-1]}`;
+  if(charts['chart-combo']) charts['chart-combo'].destroy();
+  charts['chart-combo']=new Chart(document.getElementById('chart-combo').getContext('2d'),{
+    data:{labels:comboLabels,datasets:[
+      {type:'bar',label:'거래량(건)',data:tradeValues,
+        backgroundColor:'rgba(210,168,255,0.5)',borderColor:'#d2a8ff',borderWidth:1,borderRadius:2,yAxisID:'y'},
+      {type:'line',label:'매매 가격지수',data:idxValues,
+        borderColor:'#f0883e',borderWidth:2.5,pointRadius:0,tension:0.3,yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
-          callbacks:{label:c=>` 가격지수: ${c.raw.toFixed(2)}`}}},
+          callbacks:{label:c=>c.dataset.yAxisID==='y2'?` 가격지수: ${c.raw?.toFixed(2)||'—'}`:` 거래량: ${fmt(c.raw)}건`}}
+      },
       scales:{
         x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
-        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v.toFixed(0)},grid:{color:'rgba(33,38,45,.8)'}}
+        y:{position:'left',ticks:{color:'#d2a8ff',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'},title:{display:true,text:'거래량',color:'#d2a8ff',font:{size:10}}},
+        y2:{position:'right',ticks:{color:'#f0883e',font:{size:10,family:'IBM Plex Mono'},callback:v=>v.toFixed(0)},grid:{display:false},title:{display:true,text:'가격지수',color:'#f0883e',font:{size:10}}}
       }}
   });
-
-  // 거래량 바차트
-  const rangedT=applyRange(tradeMulti);
-  const tLabels=rangedT.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
-  const tValues=rangedT.map(d=>parseFloat(d.DT)||0);
-  document.getElementById('sub-trade').textContent=`${tLabels[0]} ~ ${tLabels[tLabels.length-1]}`;
-  renderBarLine('chart-trade',tLabels,tValues,'#d2a8ff','#a371f7');
   renderAnnual('chart-trade-annual',tradeMulti,'#d2a8ff');
   renderYoY('chart-trade-yoy',tradeMulti);
 }
