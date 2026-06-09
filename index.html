@@ -119,6 +119,7 @@
   </div>
   <div class="kpi-grid" id="kpi-multi"></div>
   <div class="section-body">
+    <!-- 행1: 월별추이(2fr) + 다세대/연립비중(1fr) -->
     <div class="chart-row">
       <div class="chart-panel">
         <div class="panel-header">
@@ -135,7 +136,8 @@
         <div class="chart-wrap"><canvas id="chart-multi-type"></canvas></div>
       </div>
     </div>
-    <div class="chart-row">
+    <!-- 행2: 연간합계(2fr) + 연도별월별비교(1fr) -->
+    <div class="chart-row" style="margin-top:24px">
       <div class="chart-panel">
         <div class="panel-header">
           <span class="panel-title">연간 인허가 합계</span>
@@ -151,16 +153,23 @@
         <div class="chart-wrap short"><canvas id="chart-multi-yoy"></canvas></div>
       </div>
     </div>
-    <table>
-      <thead><tr>
-        <th>기준월</th>
-        <th style="color:var(--accent5)">인허가 (호)</th>
-        <th>전월비</th>
-        <th>전년동월비</th>
-        <th>3개월 이동평균</th>
-      </tr></thead>
-      <tbody id="table-multi"></tbody>
-    </table>
+    <!-- RAW 데이터 테이블 -->
+    <div style="margin-top:32px">
+      <div class="panel-header">
+        <span class="panel-title">RAW 데이터</span>
+        <span class="panel-sub">최근 18개월</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>기준월</th>
+          <th style="color:var(--accent5)">인허가 (호)</th>
+          <th>전월비</th>
+          <th>전년동월비</th>
+          <th>3개월 이동평균</th>
+        </tr></thead>
+        <tbody id="table-multi"></tbody>
+      </table>
+    </div>
   </div>
 
   <!-- ② 아파트 -->
@@ -170,6 +179,7 @@
   </div>
   <div class="kpi-grid" id="kpi-apt"></div>
   <div class="section-body">
+    <!-- 행1: 월별추이(2fr) + 연도별월별비교(1fr) -->
     <div class="chart-row">
       <div class="chart-panel">
         <div class="panel-header">
@@ -186,23 +196,34 @@
         <div class="chart-wrap"><canvas id="chart-apt-yoy"></canvas></div>
       </div>
     </div>
-    <div class="chart-panel" style="margin-top:24px">
-      <div class="panel-header">
-        <span class="panel-title">연간 인허가 합계</span>
-        <span class="panel-sub">연도별 연간 총 인허가 호수</span>
+    <!-- 행2: 연간합계(2fr) 단독 -->
+    <div class="chart-row" style="margin-top:24px">
+      <div class="chart-panel">
+        <div class="panel-header">
+          <span class="panel-title">연간 인허가 합계</span>
+          <span class="panel-sub">연도별 연간 총 인허가 호수</span>
+        </div>
+        <div class="chart-wrap short"><canvas id="chart-apt-annual"></canvas></div>
       </div>
-      <div class="chart-wrap short"><canvas id="chart-apt-annual"></canvas></div>
+      <div></div>
     </div>
-    <table>
-      <thead><tr>
-        <th>기준월</th>
-        <th style="color:var(--accent2)">인허가 (호)</th>
-        <th>전월비</th>
-        <th>전년동월비</th>
-        <th>3개월 이동평균</th>
-      </tr></thead>
-      <tbody id="table-apt"></tbody>
-    </table>
+    <!-- RAW 데이터 테이블 -->
+    <div style="margin-top:32px">
+      <div class="panel-header">
+        <span class="panel-title">RAW 데이터</span>
+        <span class="panel-sub">최근 18개월</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>기준월</th>
+          <th style="color:var(--accent2)">인허가 (호)</th>
+          <th>전월비</th>
+          <th>전년동월비</th>
+          <th>3개월 이동평균</th>
+        </tr></thead>
+        <tbody id="table-apt"></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="footer">
