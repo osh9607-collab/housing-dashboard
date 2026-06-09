@@ -88,8 +88,8 @@ exports.handler = async (event) => {
       const startYear = 2013;
       const endYear = parseInt(endPrdDe.slice(0,4));
       const ranges = [];
-      for (let y = startYear; y <= endYear; y += 5) {
-        ranges.push([`${y}01`, `${Math.min(y+4, endYear)}12`]);
+      for (let y = startYear; y <= endYear; y += 2) {
+        ranges.push([`${y}01`, `${Math.min(y+1, endYear)}12`]);
       }
       const results = await Promise.all(ranges.map(([s, e]) => {
         const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=${cfg.itmId}&${cfg.objL}&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${s}&endPrdDe=${e}&orgId=${orgId}&tblId=${tblId}`;
