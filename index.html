@@ -701,22 +701,22 @@ function renderAptSection(key,data,barColor,lineColor){
 }
 
 function renderPriceSection(){
-  if(!priceIdx.length||!tradeMulti.length) return;
+  if(!priceIdx.length && !tradeMulti.length) return;
 
-  // KPI: 최근 가격지수 + 전년동월비
-  const lastIdx=parseFloat(priceIdx[priceIdx.length-1]?.DT)||0;
-  const yoyIdx=priceIdx.length>=13?(parseFloat(priceIdx[priceIdx.length-13]?.DT)||0):null;
-  const yoyIdxPct=yoyIdx?((lastIdx-yoyIdx)/yoyIdx*100):null;
-  const lastTrade=parseFloat(tradeMulti[tradeMulti.length-1]?.DT)||0;
-  const yoyTrade=tradeMulti.length>=13?(parseFloat(tradeMulti[tradeMulti.length-13]?.DT)||0):null;
-  const yoyTradePct=yoyTrade?((lastTrade-yoyTrade)/yoyTrade*100):null;
-  const latestYear=tradeMulti[tradeMulti.length-1].PRD_DE.slice(0,4);
-  const prevYear=String(parseInt(latestYear)-1);
-  const lm=parseInt(tradeMulti[tradeMulti.length-1].PRD_DE.slice(4,6));
-  const ytd=tradeMulti.filter(d=>d.PRD_DE.startsWith(latestYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
-  const ytdPrev=tradeMulti.filter(d=>d.PRD_DE.startsWith(prevYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
-  const ytdPct=ytdPrev?((ytd-ytdPrev)/ytdPrev*100):null;
-  const avg12=tradeMulti.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/12;
+  // KPI
+  const lastIdx = priceIdx.length ? (parseFloat(priceIdx[priceIdx.length-1]?.DT)||0) : 0;
+  const yoyIdx = priceIdx.length>=13 ? (parseFloat(priceIdx[priceIdx.length-13]?.DT)||0) : null;
+  const yoyIdxPct = yoyIdx ? ((lastIdx-yoyIdx)/yoyIdx*100) : null;
+  const lastTrade = tradeMulti.length ? (parseFloat(tradeMulti[tradeMulti.length-1]?.DT)||0) : 0;
+  const yoyTrade = tradeMulti.length>=13 ? (parseFloat(tradeMulti[tradeMulti.length-13]?.DT)||0) : null;
+  const yoyTradePct = yoyTrade ? ((lastTrade-yoyTrade)/yoyTrade*100) : null;
+  const latestYear = tradeMulti.length ? tradeMulti[tradeMulti.length-1].PRD_DE.slice(0,4) : String(new Date().getFullYear());
+  const prevYear = String(parseInt(latestYear)-1);
+  const lm = tradeMulti.length ? parseInt(tradeMulti[tradeMulti.length-1].PRD_DE.slice(4,6)) : 1;
+  const ytd = tradeMulti.filter(d=>d.PRD_DE.startsWith(latestYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  const ytdPrev = tradeMulti.filter(d=>d.PRD_DE.startsWith(prevYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  const ytdPct = ytdPrev ? ((ytd-ytdPrev)/ytdPrev*100) : null;
+  const avg12 = tradeMulti.length ? tradeMulti.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/Math.min(tradeMulti.length,12) : 0;
 
   document.getElementById('kpi-price').innerHTML=`
     <div class="kpi-card"><div class="kpi-label">매매 가격지수</div>
@@ -732,24 +732,22 @@ function renderPriceSection(){
       <div class="kpi-value" style="color:#d2a8ff">${fmt(avg12)}<span class="kpi-unit">건</span></div>
       <div class="kpi-change neutral">최근 12개월</div></div>`;
 
-  // 가격지수 + 거래량 콤보 차트 (이중축)
-  const rangedP=applyRange(priceIdx);
-  const rangedT=applyRange(tradeMulti);
-  // 공통 기간으로 맞춤
-  const comboLabels=rangedT.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
-  const tradeValues=rangedT.map(d=>parseFloat(d.DT)||0);
-  const idxValues=rangedT.map(d=>{
-    const found=priceIdx.find(p=>p.PRD_DE===d.PRD_DE);
-    return found?parseFloat(found.DT):null;
+  if(!tradeMulti.length) return;
+
+  // 콤보 차트
+  const rangedT = applyRange(tradeMulti);
+  const comboLabels = rangedT.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
+  const tradeValues = rangedT.map(d=>parseFloat(d.DT)||0);
+  const idxValues = rangedT.map(d=>{
+    const found = priceIdx.find(p=>p.PRD_DE===d.PRD_DE);
+    return found ? parseFloat(found.DT) : null;
   });
   document.getElementById('sub-trade').textContent=`${comboLabels[0]} ~ ${comboLabels[comboLabels.length-1]}`;
   if(charts['chart-combo']) charts['chart-combo'].destroy();
   charts['chart-combo']=new Chart(document.getElementById('chart-combo').getContext('2d'),{
     data:{labels:comboLabels,datasets:[
-      {type:'bar',label:'거래량(건)',data:tradeValues,
-        backgroundColor:'rgba(210,168,255,0.5)',borderColor:'#d2a8ff',borderWidth:1,borderRadius:2,yAxisID:'y'},
-      {type:'line',label:'매매 가격지수',data:idxValues,
-        borderColor:'#f0883e',borderWidth:2.5,pointRadius:0,tension:0.3,yAxisID:'y2'}
+      {type:'bar',label:'거래량(건)',data:tradeValues,backgroundColor:'rgba(210,168,255,0.5)',borderColor:'#d2a8ff',borderWidth:1,borderRadius:2,yAxisID:'y'},
+      {type:'line',label:'매매 가격지수',data:idxValues,borderColor:'#f0883e',borderWidth:2.5,pointRadius:0,tension:0.3,yAxisID:'y2'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{
