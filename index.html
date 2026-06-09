@@ -319,6 +319,35 @@
     </div>
   </div>
 
+  <!-- ⑦ 매매 가격지수 + 거래량 -->
+  <div class="section-bar">
+    <span class="section-dot" style="background:#d2a8ff"></span>
+    <span class="section-label">⑦ 다세대주택 매매 가격지수 · 거래량 — 서울</span>
+  </div>
+  <div class="kpi-grid" id="kpi-price"></div>
+  <div class="section-body">
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연립다세대 매매 실거래가격지수</span><span class="panel-sub">2017.11 = 100</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-price-idx"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">다세대+연립 매매거래량</span><span class="panel-sub" id="sub-trade">—</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-trade"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row mt24">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">거래량 연간 합계</span><span class="panel-sub">연도별</span></div>
+        <div class="chart-wrap short"><canvas id="chart-trade-annual"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">거래량 연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap short"><canvas id="chart-trade-yoy"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- RAW 데이터 -->
   <div class="section-bar">
     <span class="section-dot" style="background:var(--text-muted)"></span>
@@ -386,6 +415,7 @@ const charts = {};
 let permitMulti=[], permitDase=[], permitYeon=[], permitApt=[];
 let startMulti=[], startDase=[], startYeon=[], startApt=[];
 let doneMulti=[], doneDase=[], doneYeon=[], doneApt=[];
+let priceIdx=[], tradeMulti=[], tradeApt=[];
 
 function fmt(n){ return(n==null||isNaN(n))?'—':Math.round(n).toLocaleString('ko-KR'); }
 function fmtPct(n){ return(n==null||isNaN(n))?'—':(n>=0?'+':'')+n.toFixed(1)+'%'; }
@@ -427,16 +457,20 @@ async function loadData(){
   document.getElementById('main-content').style.display='none';
 
   try {
-    const [r1,r2,r3]=await Promise.all([
+    const [r1,r2,r3,r4,r5]=await Promise.all([
       fetch(`${PROXY}?tblId=DT_MLTM_1948`),
       fetch(`${PROXY}?tblId=DT_MLTM_5387`),
       fetch(`${PROXY}?tblId=DT_MLTM_5373`),
+      fetch(`${PROXY}?tblId=DT_KAB_11672_S7`),
+      fetch(`${PROXY}?tblId=DT_408_2006_S0061`),
     ]);
-    if(!r1.ok||!r2.ok||!r3.ok) throw new Error('HTTP 오류');
-    const [d1,d2,d3]=await Promise.all([r1.json(),r2.json(),r3.json()]);
+    if(!r1.ok||!r2.ok||!r3.ok||!r4.ok||!r5.ok) throw new Error('HTTP 오류');
+    const [d1,d2,d3,d4,d5]=await Promise.all([r1.json(),r2.json(),r3.json(),r4.json(),r5.json()]);
     if(!Array.isArray(d1)) throw new Error(d1?.errMsg||'인허가 오류');
     if(!Array.isArray(d2)) throw new Error(d2?.errMsg||'착공 오류');
     if(!Array.isArray(d3)) throw new Error(d3?.errMsg||'준공 오류');
+    if(!Array.isArray(d4)) throw new Error(d4?.errMsg||'가격지수 오류');
+    if(!Array.isArray(d5)) throw new Error(d5?.errMsg||'거래량 오류');
 
     // 인허가 (누계→순증)
     const p=processTypeData(d1,['다세대','연립'],true);
@@ -454,7 +488,23 @@ async function loadData(){
     doneDase=dn.t1; doneYeon=dn.t2; doneMulti=dn.combined;
     doneApt=d3.filter(d=>d.C1_NM==='서울'&&d.C2_NM==='아파트').sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
 
-    document.getElementById('last-updated').textContent=
+    // 가격지수 (서울, ITM_ID=T1 지수만)
+    priceIdx = d4.filter(d=>d.C1_NM==='서울'&&d.ITM_ID==='T1')
+      .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+
+    // 거래량 (다세대주택+연립 합산, ITM_ID=T1 동(호)수만)
+    const tradeDase = d5.filter(d=>d.C2_NM==='다세대주택'&&d.ITM_ID==='13103114445T1')
+      .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+    const tradeYeon = d5.filter(d=>d.C2_NM==='연립주택'&&d.ITM_ID==='13103114445T1')
+      .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+    tradeApt = d5.filter(d=>d.C2_NM==='아파트'&&d.ITM_ID==='13103114445T1')
+      .sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
+    const allTradePrds=[...new Set([...tradeDase,...tradeYeon].map(d=>d.PRD_DE))].sort();
+    tradeMulti = allTradePrds.map(prd=>{
+      const a=parseFloat(tradeDase.find(d=>d.PRD_DE===prd)?.DT)||0;
+      const b=parseFloat(tradeYeon.find(d=>d.PRD_DE===prd)?.DT)||0;
+      return{PRD_DE:prd, DT:String(a+b)};
+    });
       `갱신: ${new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
     document.getElementById('loading-state').style.display='none';
     document.getElementById('main-content').style.display='block';
@@ -481,6 +531,7 @@ function updateAll(){
   renderAptSection('apt',permitApt,'#f0883e','#ffa657');
   renderAptSection('apt-start',startApt,'#f0883e','#ffa657');
   renderAptSection('apt-done',doneApt,'#f0883e','#ffa657');
+  renderPriceSection();
   renderRawTable('table-permit',permitMulti,'#d2a8ff');
   renderRawTable('table-start',startMulti,'#d2a8ff');
   renderRawTable('table-done',doneMulti,'#d2a8ff');
@@ -642,6 +693,70 @@ function renderAptSection(key,data,barColor,lineColor){
   document.getElementById(`sub-${key}`).textContent=`${labels[0]} ~ ${labels[labels.length-1]}`;
   renderAnnual(`chart-${key}-annual`,data,barColor);
   renderYoY(`chart-${key}-yoy`,data);
+}
+
+function renderPriceSection(){
+  if(!priceIdx.length||!tradeMulti.length) return;
+
+  // KPI: 최근 가격지수 + 전년동월비
+  const lastIdx=parseFloat(priceIdx[priceIdx.length-1]?.DT)||0;
+  const yoyIdx=priceIdx.length>=13?(parseFloat(priceIdx[priceIdx.length-13]?.DT)||0):null;
+  const yoyIdxPct=yoyIdx?((lastIdx-yoyIdx)/yoyIdx*100):null;
+  const lastTrade=parseFloat(tradeMulti[tradeMulti.length-1]?.DT)||0;
+  const yoyTrade=tradeMulti.length>=13?(parseFloat(tradeMulti[tradeMulti.length-13]?.DT)||0):null;
+  const yoyTradePct=yoyTrade?((lastTrade-yoyTrade)/yoyTrade*100):null;
+  const latestYear=tradeMulti[tradeMulti.length-1].PRD_DE.slice(0,4);
+  const prevYear=String(parseInt(latestYear)-1);
+  const lm=parseInt(tradeMulti[tradeMulti.length-1].PRD_DE.slice(4,6));
+  const ytd=tradeMulti.filter(d=>d.PRD_DE.startsWith(latestYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  const ytdPrev=tradeMulti.filter(d=>d.PRD_DE.startsWith(prevYear)&&parseInt(d.PRD_DE.slice(4,6))<=lm).reduce((s,d)=>s+(parseFloat(d.DT)||0),0);
+  const ytdPct=ytdPrev?((ytd-ytdPrev)/ytdPrev*100):null;
+  const avg12=tradeMulti.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/12;
+
+  document.getElementById('kpi-price').innerHTML=`
+    <div class="kpi-card"><div class="kpi-label">매매 가격지수</div>
+      <div class="kpi-value" style="color:#d2a8ff">${lastIdx.toFixed(1)}<span class="kpi-unit">pt</span></div>
+      <div class="kpi-change ${yoyIdxPct>0?'up':yoyIdxPct<0?'down':'neutral'}">${yoyIdxPct!==null?`전년동월比 ${fmtPct(yoyIdxPct)}`:'—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">다세대+연립 거래량</div>
+      <div class="kpi-value" style="color:#d2a8ff">${fmt(lastTrade)}<span class="kpi-unit">건</span></div>
+      <div class="kpi-change ${yoyTradePct>0?'up':yoyTradePct<0?'down':'neutral'}">${yoyTradePct!==null?`전년동월比 ${fmtPct(yoyTradePct)}`:'—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">거래량 연간 누계</div>
+      <div class="kpi-value" style="color:#d2a8ff">${fmt(ytd)}<span class="kpi-unit">건</span></div>
+      <div class="kpi-change ${ytdPct>0?'up':ytdPct<0?'down':'neutral'}">${ytdPct!==null?`전년동기比 ${fmtPct(ytdPct)}`:'—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">거래량 12개월 평균</div>
+      <div class="kpi-value" style="color:#d2a8ff">${fmt(avg12)}<span class="kpi-unit">건</span></div>
+      <div class="kpi-change neutral">최근 12개월</div></div>`;
+
+  // 가격지수 라인차트
+  const ranged=applyRange(priceIdx);
+  const idxLabels=ranged.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
+  const idxValues=ranged.map(d=>parseFloat(d.DT)||0);
+  if(charts['chart-price-idx']) charts['chart-price-idx'].destroy();
+  charts['chart-price-idx']=new Chart(document.getElementById('chart-price-idx').getContext('2d'),{
+    type:'line',
+    data:{labels:idxLabels,datasets:[{
+      label:'매매 가격지수',data:idxValues,
+      borderColor:'#d2a8ff',backgroundColor:'rgba(210,168,255,0.1)',
+      borderWidth:2,pointRadius:0,tension:0.3,fill:true
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
+        tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
+          callbacks:{label:c=>` 가격지수: ${c.raw.toFixed(2)}`}}},
+      scales:{
+        x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v.toFixed(0)},grid:{color:'rgba(33,38,45,.8)'}}
+      }}
+  });
+
+  // 거래량 바차트
+  const rangedT=applyRange(tradeMulti);
+  const tLabels=rangedT.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
+  const tValues=rangedT.map(d=>parseFloat(d.DT)||0);
+  document.getElementById('sub-trade').textContent=`${tLabels[0]} ~ ${tLabels[tLabels.length-1]}`;
+  renderBarLine('chart-trade',tLabels,tValues,'#d2a8ff','#a371f7');
+  renderAnnual('chart-trade-annual',tradeMulti,'#d2a8ff');
+  renderYoY('chart-trade-yoy',tradeMulti);
 }
 
 function renderRawTable(tbodyId,data,color){
