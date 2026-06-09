@@ -1,10 +1,10 @@
 const https = require('https');
-
-function fetchKosis(url) {
+ 
+function fetchUrl(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       let data = '';
-      res.on('data', (chunk) => { data += chunk; });
+      res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try { resolve(JSON.parse(data)); }
         catch(e) { resolve(data); }
@@ -12,56 +12,111 @@ function fetchKosis(url) {
     }).on('error', reject);
   });
 }
-
+ 
+const API_KEY = 'MTI0YzJmMjQzNTg1OGQwYzczNTEzYmY2NDk3MGQxY2Q=';
+ 
+// 통계표별 설정
+const TBL_CONFIG = {
+  // 인허가 (서울 C1=13102871090A.0003)
+  'DT_MLTM_1948': {
+    itmId: '13103871090T1+',
+    objL: 'objL1=13102871090A.0003&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
+    split: true,
+  },
+  // 착공 (구조 확인 필요 - 우선 ALL로)
+  'DT_MLTM_5387': {
+    itmId: '13103766969T1+',
+    objL: 'objL1=ALL&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
+    split: true,
+  },
+  // 준공
+  'DT_MLTM_5373': {
+    itmId: '13103766973T1+',
+    objL: 'objL1=ALL&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=',
+    split: true,
+  },
+  // 멸실 (연간)
+  'DT_MLTM_5416': {
+    itmId: '13103883384T1+13103883384T2+13103883384T3+13103883384T4+13103883384T5+13103883384T6+',
+    objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
+    split: false,
+    prdSe: 'Y',
+    startPrdDe: '2010',
+    endPrdDe: '2024',
+  },
+  // 매매가격지수
+  'DT_KAB_11672_S7': {
+    itmId: 'T1+T2+',
+    objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
+    split: false,
+    orgId: '408',
+  },
+  // 매매거래량
+  'DT_408_2006_S0061': {
+    itmId: '13103114445T1+13103114445T2+',
+    objL: 'objL1=ALL&objL2=ALL&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
+    split: false,
+    orgId: '408',
+  },
+  // 중위가격
+  'DT_KAB_11672_S18': {
+    itmId: 'T001+',
+    objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
+    split: false,
+    orgId: '408',
+  },
+  // 평균가격
+  'DT_KAB_11672_S17': {
+    itmId: 'T001+',
+    objL: 'objL1=ALL&objL2=&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
+    split: false,
+    orgId: '408',
+  },
+};
+ 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
-  const orgId = params.orgId || '116';
-  const tblId = params.tblId || 'DT_MLTM_1946';
-  const prdSe = params.prdSe || 'M';
-  const endPrdDe = params.endPrdDe || '202612';
-  const API_KEY = 'MTI0YzJmMjQzNTg1OGQwYzczNTEzYmY2NDk3MGQxY2Q=';
-
+  const tblId = params.tblId || 'DT_MLTM_1948';
+  const cfg = TBL_CONFIG[tblId];
+ 
+  if (!cfg) {
+    return { statusCode: 400, headers: {'Access-Control-Allow-Origin':'*'}, body: JSON.stringify({error: 'Unknown tblId'}) };
+  }
+ 
+  const orgId = cfg.orgId || params.orgId || '116';
+  const prdSe = cfg.prdSe || params.prdSe || 'M';
+  const endPrdDe = cfg.endPrdDe || params.endPrdDe || '202612';
+ 
   try {
     let result;
-
-    if (tblId === 'DT_MLTM_1948') {
-      // 분할 호출: 2013~2017, 2018~2022, 2023~현재
-      const itmId = '13103871090T1+';
-      const objParams = 'objL1=13102871090A.0003&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=';
-      const ranges = [
-        ['201301', '201712'],
-        ['201801', '202212'],
-        ['202301', endPrdDe],
-      ];
-
-      const results = await Promise.all(ranges.map(([start, end]) => {
-        const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=${itmId}&${objParams}&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${start}&endPrdDe=${end}&orgId=${orgId}&tblId=${tblId}`;
-        return fetchKosis(url);
+ 
+    if (cfg.split) {
+      // 40000셀 방지: 5년씩 분할 호출
+      const startYear = parseInt(params.startPrdDe?.slice(0,4) || '2013');
+      const endYear = parseInt(endPrdDe.slice(0,4));
+      const ranges = [];
+      for (let y = startYear; y <= endYear; y += 5) {
+        ranges.push([`${y}01`, `${Math.min(y+4, endYear)}12`]);
+      }
+      const results = await Promise.all(ranges.map(([s, e]) => {
+        const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=${cfg.itmId}&${cfg.objL}&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${s}&endPrdDe=${e}&orgId=${orgId}&tblId=${tblId}`;
+        return fetchUrl(url);
       }));
-
-      // 에러 체크
       for (const r of results) {
         if (r?.err) throw new Error(r.errMsg || JSON.stringify(r));
       }
-
-      // 배열 합치기
       result = results.flat();
-
     } else {
-      // DT_MLTM_1946 단일 호출
-      const startPrdDe = params.startPrdDe || '200701';
-      const itmId = '13103871089T1+';
-      const objParams = 'objL1=ALL&objL2=ALL&objL3=13102871089C.0002&objL4=&objL5=&objL6=&objL7=&objL8=';
-      const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=${itmId}&${objParams}&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
-      result = await fetchKosis(url);
+      const startPrdDe = cfg.startPrdDe || params.startPrdDe || '201301';
+      const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=${cfg.itmId}&${cfg.objL}&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
+      result = await fetchUrl(url);
     }
-
+ 
     return {
       statusCode: 200,
       headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
       body: JSON.stringify(result)
     };
-
   } catch(e) {
     return {
       statusCode: 500,
