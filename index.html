@@ -783,6 +783,26 @@ function renderPriceSection(){
     const found = priceIdx.find(p=>p.PRD_DE===d.PRD_DE);
     return found ? parseFloat(found.DT) : null;
   });
+
+  // null 구간 보간 (선 끊김 방지)
+  const idxFilled = idxValues.map((v,i,arr)=>{
+    if(v!==null) return v;
+    // 앞뒤 값으로 선형 보간
+    let prev=null, next=null, pi=i, ni=i;
+    while(pi>0){pi--;if(arr[pi]!==null){prev=arr[pi];break;}}
+    while(ni<arr.length-1){ni++;if(arr[ni]!==null){next=arr[ni];break;}}
+    if(prev!==null&&next!==null) return prev+(next-prev)*(i-pi)/(ni-pi);
+    return prev!==null?prev:next;
+  });
+
+  // y2 최솟값을 거래량 최댓값의 비율로 설정 → 선이 막대 위에 뜨게
+  const maxTrade = Math.max(...tradeValues);
+  const minIdx = Math.min(...idxFilled.filter(v=>v!==null));
+  const maxIdx = Math.max(...idxFilled.filter(v=>v!==null));
+  // y2 min을 실제 최솟값보다 낮게 → 선이 위쪽에 위치
+  const y2Min = Math.floor(minIdx * 0.7);
+  const y2Max = Math.ceil(maxIdx * 1.05);
+
   document.getElementById('sub-trade').textContent=`${comboLabels[0]} ~ ${comboLabels[comboLabels.length-1]}`;
   if(charts['chart-combo']) charts['chart-combo'].destroy();
   charts['chart-combo']=new Chart(document.getElementById('chart-combo').getContext('2d'),{
@@ -790,10 +810,10 @@ function renderPriceSection(){
       {type:'bar',label:'거래량(건)',data:tradeValues,
         backgroundColor:'rgba(210,168,255,0.45)',borderColor:'#d2a8ff',borderWidth:1,borderRadius:2,
         yAxisID:'y', order:2},
-      {type:'line',label:'매매 가격지수',data:idxValues,
+      {type:'line',label:'매매 가격지수',data:idxFilled,
         borderColor:'#f0883e',backgroundColor:'transparent',
         borderWidth:2.5,pointRadius:0,tension:0.3,
-        yAxisID:'y2', order:1}
+        yAxisID:'y2', order:1, spanGaps:true}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{
@@ -810,6 +830,7 @@ function renderPriceSection(){
           grid:{color:'rgba(33,38,45,.8)'},
           title:{display:true,text:'거래량(건)',color:'#d2a8ff',font:{size:10,family:'IBM Plex Mono'}}},
         y2:{position:'right',
+          min: y2Min, max: y2Max,
           ticks:{color:'#f0883e',font:{size:10,family:'IBM Plex Mono'},callback:v=>v.toFixed(0)},
           grid:{display:false},
           title:{display:true,text:'가격지수',color:'#f0883e',font:{size:10,family:'IBM Plex Mono'}}}
