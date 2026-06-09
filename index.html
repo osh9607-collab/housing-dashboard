@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>서울 주택 공급 파이프라인 대시보드</title>
+<title>서울 주택공급 현황</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
@@ -11,7 +11,7 @@
     --bg:#0d1117; --surface:#161b22; --border:#21262d;
     --accent:#f0883e; --accent2:#58a6ff; --accent3:#3fb950;
     --accent4:#ff7b72; --accent5:#d2a8ff; --accent6:#ffa657;
-    --text-primary:#e6edf3; --text-secondary:#8b949e; --text-muted:#484f58;
+    --text-primary:#e6edf3; --text-secondary:#b1bac4; --text-muted:#768390;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text-primary);font-family:'Noto Sans KR',sans-serif;}
@@ -38,25 +38,25 @@
 
   .section-bar{padding:14px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--surface);}
   .section-dot{width:8px;height:8px;border-radius:50%;}
-  .section-label{font-size:12px;color:var(--text-secondary);font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.03em;}
+  .section-label{font-size:12px;color:#c9d1d9;font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.03em;}
 
   .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
   .kpi-card{background:var(--bg);padding:20px 28px;}
-  .kpi-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+  .kpi-label{font-size:11px;color:#768390;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
   .kpi-value{font-size:26px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
   .kpi-unit{font-size:13px;color:var(--text-secondary);margin-left:4px;}
   .kpi-change{font-size:12px;margin-top:6px;font-family:'IBM Plex Mono',monospace;}
   .kpi-change.up{color:var(--accent3);}
   .kpi-change.down{color:var(--accent4);}
-  .kpi-change.neutral{color:var(--text-muted);}
+  .kpi-change.neutral{color:#768390;}
 
   .section-body{padding:24px 32px;border-bottom:1px solid var(--border);}
   .chart-row{display:grid;grid-template-columns:2fr 1fr;gap:24px;}
   .chart-row.triple{grid-template-columns:1fr 1fr 1fr;}
   .chart-panel{}
   .panel-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;}
-  .panel-title{font-size:13px;font-weight:600;}
-  .panel-sub{font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}
+  .panel-title{font-size:13px;font-weight:600;color:#c9d1d9;}
+  .panel-sub{font-size:11px;color:#768390;font-family:'IBM Plex Mono',monospace;}
   .chart-wrap{position:relative;height:260px;}
   .chart-wrap.short{height:200px;}
   .chart-wrap.tall{height:300px;}
@@ -98,7 +98,7 @@
 
 <div class="header">
   <div class="header-left">
-    <span class="header-title">서울 주택 공급 파이프라인</span>
+    <span class="header-title">서울 주택공급 현황</span>
     <span class="header-sub">KOSIS · 국토교통부</span>
   </div>
   <span class="last-updated" id="last-updated">—</span>
@@ -121,36 +121,26 @@
     <select class="range-select" id="range-select" onchange="updateAll()">
       <option value="12">최근 12개월</option>
       <option value="24">최근 24개월</option>
-      <option value="36" selected>최근 36개월</option>
-      <option value="0">전체</option>
+      <option value="36">최근 36개월</option>
+      <option value="0" selected>전체</option>
     </select>
   </div>
 
-  <!-- 공급 파이프라인 오버뷰 -->
+  <!-- 연간 통합 차트 -->
   <div class="section-bar">
-    <span class="section-dot" style="background:var(--text-secondary)"></span>
-    <span class="section-label">공급 파이프라인 오버뷰 — 서울 전체 주택 최근월</span>
+    <span class="section-dot" style="background:#c9d1d9"></span>
+    <span class="section-label">연간 공급 현황 — 인허가 · 착공 · 준공 비교</span>
   </div>
-  <div class="pipeline-row">
-    <div class="pipeline-card">
-      <div class="pipeline-label">① 인허가</div>
-      <div class="pipeline-value" id="pipe-permit" style="color:var(--accent5)">—<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span></div>
-      <div class="pipeline-sub" id="pipe-permit-yoy">—</div>
-    </div>
-    <div class="pipeline-card">
-      <div class="pipeline-label">② 착공</div>
-      <div class="pipeline-value" id="pipe-start" style="color:#d2a8ff">—<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span></div>
-      <div class="pipeline-sub" id="pipe-start-yoy">—</div>
-    </div>
-    <div class="pipeline-card">
-      <div class="pipeline-label">③ 준공</div>
-      <div class="pipeline-value" id="pipe-done" style="color:#d2a8ff">—<span style="font-size:13px;color:var(--text-secondary);margin-left:4px">호</span></div>
-      <div class="pipeline-sub" id="pipe-done-yoy">—</div>
-    </div>
-    <div class="pipeline-card">
-      <div class="pipeline-label">인허가 기준월</div>
-      <div class="pipeline-value" id="pipe-period" style="font-size:18px;color:var(--text-secondary)">—</div>
-      <div class="pipeline-sub">최근 데이터 기준</div>
+  <div class="section-body">
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">다세대주택 연간 공급 (인허가·착공·준공)</span><span class="panel-sub">연도별 호수</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-annual-multi"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">아파트 연간 공급 (인허가·착공·준공)</span><span class="panel-sub">연도별 호수</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-annual-apt"></canvas></div>
+      </div>
     </div>
   </div>
 
@@ -327,19 +317,23 @@
   <div class="kpi-grid" id="kpi-price"></div>
   <div class="section-body">
     <div class="chart-row">
-      <div class="chart-panel" style="grid-column:1/-1">
-        <div class="panel-header"><span class="panel-title">매매 가격지수 + 다세대+연립 거래량</span><span class="panel-sub" id="sub-trade">—</span></div>
-        <div class="chart-wrap tall"><canvas id="chart-combo"></canvas></div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연립다세대 매매 가격지수</span><span class="panel-sub">2017.11 = 100</span></div>
+        <div class="chart-wrap"><canvas id="chart-price-idx"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">거래량 연도별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap"><canvas id="chart-trade-yoy"></canvas></div>
       </div>
     </div>
     <div class="chart-row mt24">
       <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">거래량 연간 합계</span><span class="panel-sub">연도별</span></div>
-        <div class="chart-wrap short"><canvas id="chart-trade-annual"></canvas></div>
+        <div class="panel-header"><span class="panel-title">다세대+연립 매매거래량</span><span class="panel-sub" id="sub-trade">—</span></div>
+        <div class="chart-wrap"><canvas id="chart-combo"></canvas></div>
       </div>
       <div class="chart-panel">
-        <div class="panel-header"><span class="panel-title">거래량 연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
-        <div class="chart-wrap short"><canvas id="chart-trade-yoy"></canvas></div>
+        <div class="panel-header"><span class="panel-title">거래량 연간 합계</span><span class="panel-sub">연도별</span></div>
+        <div class="chart-wrap"><canvas id="chart-trade-annual"></canvas></div>
       </div>
     </div>
   </div>
@@ -529,9 +523,55 @@ async function loadData(){
 function getRange(){ return parseInt(document.getElementById('range-select').value); }
 function applyRange(data){ const n=getRange(); return n===0?data:data.slice(-n); }
 
+function renderAnnualCombo(canvasId, datasets){
+  // 모든 데이터의 연도 합집합
+  const yearSet = new Set();
+  datasets.forEach(({data})=>data.forEach(d=>yearSet.add(d.PRD_DE.slice(0,4))));
+  const years = [...yearSet].sort();
+  const curY = String(new Date().getFullYear());
+
+  const chartDatasets = datasets.map(({label,data,color})=>({
+    label,
+    data: years.map(y=>data.filter(d=>d.PRD_DE.slice(0,4)===y).reduce((s,d)=>s+(parseFloat(d.DT)||0),0)),
+    backgroundColor: years.map(y=>y===curY?`${color}50`:`${color}90`),
+    borderColor: color,
+    borderWidth: 1,
+    borderRadius: 3,
+  }));
+
+  if(charts[canvasId]) charts[canvasId].destroy();
+  charts[canvasId]=new Chart(document.getElementById(canvasId).getContext('2d'),{
+    type:'bar',
+    data:{labels:years.map(y=>y+'년'), datasets:chartDatasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
+        tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#b1bac4',
+          callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw)}호${c.label.includes(curY)?' (진행중)':''}`}}
+      },
+      scales:{
+        x:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}
+      }
+    }
+  });
+}
+
 function updateAll(){
   if(!permitMulti.length) return;
-  updatePipeline();
+  // 연간 통합 차트
+  renderAnnualCombo('chart-annual-multi',[
+    {label:'인허가', data:permitMulti, color:'#d2a8ff'},
+    {label:'착공',   data:startMulti,  color:'#a371f7'},
+    {label:'준공',   data:doneMulti,   color:'#6e40c9'},
+  ]);
+  renderAnnualCombo('chart-annual-apt',[
+    {label:'인허가', data:permitApt, color:'#f0883e'},
+    {label:'착공',   data:startApt,  color:'#ffa657'},
+    {label:'준공',   data:doneApt,   color:'#e3b341'},
+  ]);
   // 다세대 계열 → 보라(#d2a8ff), 이동평균 → 연보라
   renderSection('permit',permitMulti,permitDase,permitYeon,'#d2a8ff','#a371f7',true);
   renderSection('start',startMulti,startDase,startYeon,'#d2a8ff','#a371f7',false);
@@ -620,8 +660,8 @@ function renderBarLine(id,labels,values,barColor,lineColor){
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
           callbacks:{label:c=>` ${c.dataset.label}: ${c.raw!==null?fmt(c.raw)+'호':'—'}`}}},
       scales:{
-        x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
-        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}
+        x:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}
       }}
   });
 }
@@ -653,8 +693,8 @@ function renderAnnual(id,data,barColor){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
         callbacks:{label:c=>` ${c.label.replace('년','')}: ${fmt(c.raw)}호${c.label.includes(curY)?' (진행중)':''}`}}},
-      scales:{x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
-        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}}}
+      scales:{x:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}}}
   });
 }
 
@@ -674,8 +714,8 @@ function renderYoY(id,data){
       plugins:{legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:20}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,
           callbacks:{label:c=>c.raw!==null?` ${c.dataset.label}년: ${fmt(c.raw)}호`:` ${c.dataset.label}년: —`}}},
-      scales:{x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
-        y:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}}}
+      scales:{x:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'}},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}}}
   });
 }
 
@@ -738,31 +778,47 @@ function renderPriceSection(){
 
   if(!tradeMulti.length) return;
 
-  // 콤보 차트
+  // 가격지수 단독 라인차트
+  const rangedP = applyRange(priceIdx);
+  const idxLabels = rangedP.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
+  const idxValues = rangedP.map(d=>parseFloat(d.DT)||0);
+  if(charts['chart-price-idx']) charts['chart-price-idx'].destroy();
+  charts['chart-price-idx']=new Chart(document.getElementById('chart-price-idx').getContext('2d'),{
+    type:'line',
+    data:{labels:idxLabels,datasets:[{
+      label:'매매 가격지수',data:idxValues,
+      borderColor:'#d2a8ff',backgroundColor:'rgba(210,168,255,0.08)',
+      borderWidth:2,pointRadius:0,tension:0.3,fill:true
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
+        tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
+          callbacks:{label:c=>` 가격지수: ${c.raw?.toFixed(2)}`}}},
+      scales:{
+        x:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},callback:v=>v.toFixed(0)},grid:{color:'rgba(33,38,45,.8)'}}
+      }}
+  });
+
+  // 거래량 바차트 (단독)
   const rangedT = applyRange(tradeMulti);
   const comboLabels = rangedT.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
   const tradeValues = rangedT.map(d=>parseFloat(d.DT)||0);
-  const idxValues = rangedT.map(d=>{
-    const found = priceIdx.find(p=>p.PRD_DE===d.PRD_DE);
-    return found ? parseFloat(found.DT) : null;
-  });
+  const ma3 = tradeValues.map((v,i,a)=>i<2?null:(a[i]+a[i-1]+a[i-2])/3);
   document.getElementById('sub-trade').textContent=`${comboLabels[0]} ~ ${comboLabels[comboLabels.length-1]}`;
   if(charts['chart-combo']) charts['chart-combo'].destroy();
   charts['chart-combo']=new Chart(document.getElementById('chart-combo').getContext('2d'),{
     data:{labels:comboLabels,datasets:[
       {type:'bar',label:'거래량(건)',data:tradeValues,backgroundColor:'rgba(210,168,255,0.5)',borderColor:'#d2a8ff',borderWidth:1,borderRadius:2,yAxisID:'y'},
-      {type:'line',label:'매매 가격지수',data:idxValues,borderColor:'#f0883e',borderWidth:2.5,pointRadius:0,tension:0.3,yAxisID:'y2'}
+      {type:'line',label:'3개월 이동평균',data:ma3,borderColor:'#a371f7',borderWidth:2,pointRadius:0,tension:0.4,yAxisID:'y'}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
+      plugins:{legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
-          callbacks:{label:c=>c.dataset.yAxisID==='y2'?` 가격지수: ${c.raw?.toFixed(2)||'—'}`:` 거래량: ${fmt(c.raw)}건`}}
-      },
+          callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw)}건`}}},
       scales:{
-        x:{ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
-        y:{position:'left',ticks:{color:'#d2a8ff',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'},title:{display:true,text:'거래량',color:'#d2a8ff',font:{size:10}}},
-        y2:{position:'right',ticks:{color:'#f0883e',font:{size:10,family:'IBM Plex Mono'},callback:v=>v.toFixed(0)},grid:{display:false},title:{display:true,text:'가격지수',color:'#f0883e',font:{size:10}}}
+        x:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12},grid:{color:'rgba(33,38,45,.8)'}},
+        y:{ticks:{color:'#768390',font:{size:10,family:'IBM Plex Mono'},callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()},grid:{color:'rgba(33,38,45,.8)'}}
       }}
   });
   renderAnnual('chart-trade-annual',tradeMulti,'#d2a8ff');
