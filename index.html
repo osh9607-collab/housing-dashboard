@@ -457,18 +457,25 @@ async function loadData(){
   document.getElementById('main-content').style.display='none';
 
   try {
-    const [r1,r2,r3,r4,r5]=await Promise.all([
+    // 1단계: 공급 데이터 (인허가/착공/준공)
+    const [r1,r2,r3]=await Promise.all([
       fetch(`${PROXY}?tblId=DT_MLTM_1948`),
       fetch(`${PROXY}?tblId=DT_MLTM_5387`),
       fetch(`${PROXY}?tblId=DT_MLTM_5373`),
-      fetch(`${PROXY}?tblId=DT_KAB_11672_S7`),
-      fetch(`${PROXY}?tblId=DT_408_2006_S0061`),
     ]);
-    if(!r1.ok||!r2.ok||!r3.ok||!r4.ok||!r5.ok) throw new Error('HTTP 오류');
-    const [d1,d2,d3,d4,d5]=await Promise.all([r1.json(),r2.json(),r3.json(),r4.json(),r5.json()]);
+    if(!r1.ok||!r2.ok||!r3.ok) throw new Error('HTTP 오류 (공급)');
+    const [d1,d2,d3]=await Promise.all([r1.json(),r2.json(),r3.json()]);
     if(!Array.isArray(d1)) throw new Error(d1?.errMsg||'인허가 오류');
     if(!Array.isArray(d2)) throw new Error(d2?.errMsg||'착공 오류');
     if(!Array.isArray(d3)) throw new Error(d3?.errMsg||'준공 오류');
+
+    // 2단계: 가격/거래량 데이터
+    const [r4,r5]=await Promise.all([
+      fetch(`${PROXY}?tblId=DT_KAB_11672_S7`),
+      fetch(`${PROXY}?tblId=DT_408_2006_S0061`),
+    ]);
+    if(!r4.ok||!r5.ok) throw new Error('HTTP 오류 (가격/거래량)');
+    const [d4,d5]=await Promise.all([r4.json(),r5.json()]);
     if(!Array.isArray(d4)) throw new Error(d4?.errMsg||'가격지수 오류');
     if(!Array.isArray(d5)) throw new Error(d5?.errMsg||'거래량 오류');
 
