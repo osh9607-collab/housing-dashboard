@@ -50,7 +50,7 @@ const TBL_CONFIG = {
   'DT_408_2006_S0061': {
     itmId: '13103114445T1+13103114445T2+',
     objL: 'objL1=ALL&objL2=ALL&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
-    orgId: '408', split: false, startPrdDe: '201301',
+    orgId: '408', split: true,
   },
   // 중위가격
   'DT_KAB_11672_S18': {
