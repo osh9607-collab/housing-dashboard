@@ -112,114 +112,89 @@
     </select>
   </div>
 
-  <!-- ① 다세대주택 -->
+  <!-- ① 다세대주택 차트 -->
   <div class="section-bar">
     <span class="section-dot dot-purple"></span>
     <span class="section-label">서울시 다세대주택 인허가 — 다세대 + 연립 합산 · 월별 순증</span>
   </div>
   <div class="kpi-grid" id="kpi-multi"></div>
   <div class="section-body">
-    <!-- 행1: 월별추이(2fr) + 다세대/연립비중(1fr) -->
     <div class="chart-row">
       <div class="chart-panel">
-        <div class="panel-header">
-          <span class="panel-title">월별 인허가 추이</span>
-          <span class="panel-sub" id="sub-multi">—</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">월별 인허가 추이</span><span class="panel-sub" id="sub-multi">—</span></div>
         <div class="chart-wrap"><canvas id="chart-multi-main"></canvas></div>
       </div>
       <div class="chart-panel">
-        <div class="panel-header">
-          <span class="panel-title">다세대 / 연립 비중</span>
-          <span class="panel-sub">최근 12개월</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">다세대 / 연립 비중</span><span class="panel-sub">최근 12개월</span></div>
         <div class="chart-wrap"><canvas id="chart-multi-type"></canvas></div>
       </div>
     </div>
-    <!-- 행2: 연간합계(2fr) + 연도별월별비교(1fr) -->
     <div class="chart-row" style="margin-top:24px">
       <div class="chart-panel">
-        <div class="panel-header">
-          <span class="panel-title">연간 인허가 합계</span>
-          <span class="panel-sub">연도별 연간 총 인허가 호수</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">연간 인허가 합계</span><span class="panel-sub">연도별 연간 총 인허가 호수</span></div>
         <div class="chart-wrap short"><canvas id="chart-multi-annual"></canvas></div>
       </div>
       <div class="chart-panel">
-        <div class="panel-header">
-          <span class="panel-title">연도별 월별 비교</span>
-          <span class="panel-sub">월별 인허가 (연도 오버레이)</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">월별 인허가 (연도 오버레이)</span></div>
         <div class="chart-wrap short"><canvas id="chart-multi-yoy"></canvas></div>
       </div>
     </div>
-    <!-- RAW 데이터 테이블 -->
-    <div style="margin-top:32px">
-      <div class="panel-header">
-        <span class="panel-title">RAW 데이터</span>
-        <span class="panel-sub">최근 18개월</span>
-      </div>
-      <table>
-        <thead><tr>
-          <th>기준월</th>
-          <th style="color:var(--accent5)">인허가 (호)</th>
-          <th>전월비</th>
-          <th>전년동월비</th>
-          <th>3개월 이동평균</th>
-        </tr></thead>
-        <tbody id="table-multi"></tbody>
-      </table>
-    </div>
   </div>
 
-  <!-- ② 아파트 -->
+  <!-- ② 아파트 차트 -->
   <div class="section-bar">
     <span class="section-dot dot-blue"></span>
     <span class="section-label">서울시 아파트 인허가 — 월별 순증</span>
   </div>
   <div class="kpi-grid" id="kpi-apt"></div>
   <div class="section-body">
-    <!-- 행1: 월별추이(2fr) + 연도별월별비교(1fr) -->
     <div class="chart-row">
       <div class="chart-panel">
-        <div class="panel-header">
-          <span class="panel-title">월별 인허가 추이</span>
-          <span class="panel-sub" id="sub-apt">—</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">월별 인허가 추이</span><span class="panel-sub" id="sub-apt">—</span></div>
         <div class="chart-wrap"><canvas id="chart-apt-main"></canvas></div>
       </div>
       <div class="chart-panel">
-        <div class="panel-header">
-          <span class="panel-title">연도별 월별 비교</span>
-          <span class="panel-sub">월별 인허가 (연도 오버레이)</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">월별 인허가 (연도 오버레이)</span></div>
         <div class="chart-wrap"><canvas id="chart-apt-yoy"></canvas></div>
       </div>
     </div>
-    <!-- 행2: 연간합계(2fr) 단독 -->
     <div class="chart-row" style="margin-top:24px">
       <div class="chart-panel">
-        <div class="panel-header">
-          <span class="panel-title">연간 인허가 합계</span>
-          <span class="panel-sub">연도별 연간 총 인허가 호수</span>
-        </div>
+        <div class="panel-header"><span class="panel-title">연간 인허가 합계</span><span class="panel-sub">연도별 연간 총 인허가 호수</span></div>
         <div class="chart-wrap short"><canvas id="chart-apt-annual"></canvas></div>
       </div>
       <div></div>
     </div>
-    <!-- RAW 데이터 테이블 -->
-    <div style="margin-top:32px">
-      <div class="panel-header">
-        <span class="panel-title">RAW 데이터</span>
+  </div>
+
+  <!-- ③ RAW 데이터 (맨 아래) -->
+  <div class="section-bar" style="margin-top:0">
+    <span class="section-dot" style="background:var(--text-muted)"></span>
+    <span class="section-label">RAW 데이터</span>
+  </div>
+  <div class="section-body">
+    <div style="margin-bottom:32px">
+      <div class="panel-header" style="margin-bottom:12px">
+        <span class="panel-title" style="color:var(--accent5)">■ 다세대주택 인허가</span>
         <span class="panel-sub">최근 18개월</span>
       </div>
       <table>
         <thead><tr>
-          <th>기준월</th>
-          <th style="color:var(--accent2)">인허가 (호)</th>
-          <th>전월비</th>
-          <th>전년동월비</th>
-          <th>3개월 이동평균</th>
+          <th>기준월</th><th style="color:var(--accent5)">인허가 (호)</th>
+          <th>전월비</th><th>전년동월비</th><th>3개월 이동평균</th>
+        </tr></thead>
+        <tbody id="table-multi"></tbody>
+      </table>
+    </div>
+    <div>
+      <div class="panel-header" style="margin-bottom:12px">
+        <span class="panel-title" style="color:var(--accent2)">■ 아파트 인허가</span>
+        <span class="panel-sub">최근 18개월</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>기준월</th><th style="color:var(--accent2)">인허가 (호)</th>
+          <th>전월비</th><th>전년동월비</th><th>3개월 이동평균</th>
         </tr></thead>
         <tbody id="table-apt"></tbody>
       </table>
@@ -364,7 +339,7 @@ function renderBarLine(canvasId, labels, values, barColor, lineColor) {
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{
-        legend:{labels:{color:'#8b949e',font:{size:11,family:'IBM Plex Mono'},boxWidth:12}},
+        legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:12}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
           callbacks:{label:c=>` ${c.dataset.label}: ${c.raw!==null?fmt(c.raw)+'호':'—'}`}}
       },
@@ -383,7 +358,7 @@ function renderDoughnut(canvasId, labels, values, colors) {
     data:{labels,datasets:[{data:values,backgroundColor:colors,borderWidth:0,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
       plugins:{
-        legend:{position:'bottom',labels:{color:'#8b949e',font:{size:11,family:'IBM Plex Mono'},boxWidth:10,padding:12}},
+        legend:{position:'bottom',labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:10,padding:12}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,
           callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}호 (${total?(c.raw/total*100).toFixed(1):0}%)`}}
       }}
@@ -411,7 +386,7 @@ function renderYoY(canvasId, data) {
     data:{labels:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],datasets},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{
-        legend:{labels:{color:'#8b949e',font:{size:11,family:'IBM Plex Mono'},boxWidth:20}},
+        legend:{labels:{color:'#c9d1d9',font:{size:12,family:'IBM Plex Mono',weight:'600'},boxWidth:20}},
         tooltip:{backgroundColor:'#161b22',borderColor:'#21262d',borderWidth:1,
           callbacks:{label:c=>c.raw!==null?` ${c.dataset.label}년: ${fmt(c.raw)}호`:` ${c.dataset.label}년: —`}}
       },
