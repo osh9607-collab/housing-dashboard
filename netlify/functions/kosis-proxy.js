@@ -49,8 +49,8 @@ const TBL_CONFIG = {
   // 매매거래량
   'DT_408_2006_S0061': {
     itmId: '13103114445T1+13103114445T2+',
-    objL: 'objL1=ALL&objL2=ALL&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
-    orgId: '408', split: true,
+    objL: 'objL1=13102114445A.0002&objL2=ALL&objL3=&objL4=&objL5=&objL6=&objL7=&objL8=',
+    orgId: '408', split: false, startPrdDe: '201301',
   },
   // 중위가격
   'DT_KAB_11672_S18': {
