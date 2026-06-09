@@ -1,55 +1,598 @@
-const https = require('https');
- 
-exports.handler = async (event) => {
-  const params = event.queryStringParameters || {};
-  const orgId = params.orgId || '116';
-  const tblId = params.tblId || 'DT_MLTM_1946';
-  const prdSe = params.prdSe || 'M';
-  const startPrdDe = params.startPrdDe || '200701';
-  const endPrdDe = params.endPrdDe || '202612';
-  const API_KEY = 'MTI0YzJmMjQzNTg1OGQwYzczNTEzYmY2NDk3MGQxY2Q=';
- 
-  // 통계표별 파라미터 분기
-  let itmId, objParams;
- 
-  if (tblId === 'DT_MLTM_1948') {
-    // 주택유형별 인허가 - C1=시도, C2=대분류, C3=중분류, C4=소분류
-    itmId = '13103871090T1+';
-    objParams = 'objL1=ALL&objL2=ALL&objL3=ALL&objL4=ALL&objL5=&objL6=&objL7=&objL8=';
-  } else {
-    // DT_MLTM_1946 부문별 인허가 - 서울(C3) 고정
-    itmId = '13103871089T1+';
-    objParams = 'objL1=ALL&objL2=ALL&objL3=13102871089C.0002&objL4=&objL5=&objL6=&objL7=&objL8=';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>서울 주택건설 인허가실적 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #21262d;
+    --accent: #f0883e; --accent2: #58a6ff; --accent3: #3fb950;
+    --accent4: #ff7b72; --accent5: #d2a8ff;
+    --text-primary: #e6edf3; --text-secondary: #8b949e; --text-muted: #484f58;
   }
- 
-  const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${API_KEY}&itmId=${itmId}&${objParams}&format=json&jsonVD=Y&prdSe=${prdSe}&startPrdDe=${startPrdDe}&endPrdDe=${endPrdDe}&orgId=${orgId}&tblId=${tblId}`;
- 
-  return new Promise((resolve) => {
-    https.get(url, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          resolve({
-            statusCode: 200,
-            headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-            body: JSON.stringify(parsed)
-          });
-        } catch (e) {
-          resolve({
-            statusCode: 200,
-            headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
-            body: data
-          });
-        }
-      });
-    }).on('error', (err) => {
-      resolve({
-        statusCode: 500,
-        headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: err.message })
-      });
-    });
-  });
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text-primary); font-family: 'Noto Sans KR', sans-serif; }
+
+  .header {
+    border-bottom: 1px solid var(--border); padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--bg); z-index: 100;
+  }
+  .header-left { display: flex; align-items: baseline; gap: 12px; }
+  .header-title { font-size: 18px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+  .last-updated { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+
+  .loading-state, .error-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 60vh; gap: 16px;
+  }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--text-secondary); font-size: 14px; }
+  .error-title { color: var(--accent4); font-size: 16px; font-weight: 600; }
+  .error-msg { color: var(--text-secondary); font-size: 13px; }
+  .retry-btn { margin-top: 8px; padding: 8px 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text-primary); border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .retry-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* 섹션 구분 */
+  .section-divider {
+    padding: 14px 32px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'IBM Plex Mono', monospace; }
+  .section-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-orange { background: var(--accent); }
+  .dot-purple { background: var(--accent5); }
+
+  .controls {
+    padding: 12px 32px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .control-label { font-size: 12px; color: var(--text-muted); }
+  .range-select {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;
+  }
+  .range-select:focus { outline: none; border-color: var(--accent); }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .kpi-card { background: var(--bg); padding: 22px 28px; }
+  .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .kpi-value { font-size: 26px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .kpi-unit { font-size: 13px; color: var(--text-secondary); margin-left: 4px; }
+  .kpi-change { font-size: 12px; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; }
+  .kpi-change.up { color: var(--accent3); }
+  .kpi-change.down { color: var(--accent4); }
+  .kpi-change.neutral { color: var(--text-muted); }
+
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .chart-panel { background: var(--bg); padding: 24px; }
+  .chart-panel.full-width { grid-column: 1 / -1; border-top: 1px solid var(--border); }
+  .panel-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+  .panel-title { font-size: 14px; font-weight: 600; }
+  .panel-sub { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+  .chart-wrap { position: relative; height: 260px; }
+  .chart-wrap.tall { height: 300px; }
+
+  /* 다세대 KPI - 보라색 계열 */
+  .kpi-grid-multi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+  .kpi-card-multi { background: #0d1117; padding: 22px 28px; border-left: 2px solid var(--accent5); }
+
+  .table-panel { padding: 24px 32px; border-bottom: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; font-weight: 400; }
+  td { padding: 10px 16px; border-bottom: 1px solid rgba(33,38,45,0.5); font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); }
+  tr:hover td { background: rgba(22,27,34,0.8); }
+  td:first-child { color: var(--text-primary); }
+  td:nth-child(2) { color: var(--accent5); font-weight: 600; }
+
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
+  .badge.up { background: rgba(63,185,80,0.15); color: var(--accent3); }
+  .badge.down { background: rgba(255,123,114,0.15); color: var(--accent4); }
+
+  .footer { padding: 16px 32px; display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+
+  @media (max-width: 768px) {
+    .kpi-grid, .kpi-grid-multi { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .header, .controls, .table-panel, .section-divider { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <span class="header-title">서울 주택건설 인허가실적</span>
+    <span class="header-sub">KOSIS · 국토교통부</span>
+  </div>
+  <span class="last-updated" id="last-updated">—</span>
+</div>
+
+<div class="loading-state" id="loading-state">
+  <div class="spinner"></div>
+  <div class="loading-text">데이터 불러오는 중...</div>
+</div>
+<div class="error-state" id="error-state" style="display:none">
+  <div class="error-title">데이터 로드 실패</div>
+  <div class="error-msg" id="error-msg"></div>
+  <button class="retry-btn" onclick="loadData()">다시 시도</button>
+</div>
+
+<div id="main-content" style="display:none">
+
+  <!-- ① 전체 인허가 섹션 -->
+  <div class="section-divider">
+    <span class="section-dot dot-orange"></span>
+    <span class="section-label">전체 주택 인허가 (총계)</span>
+  </div>
+
+  <div class="controls">
+    <span class="control-label">기간</span>
+    <select class="range-select" id="range-select" onchange="updateCharts()">
+      <option value="12">최근 12개월</option>
+      <option value="24">최근 24개월</option>
+      <option value="36" selected>최근 36개월</option>
+      <option value="0">전체</option>
+    </select>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">최근월 인허가</div>
+      <div class="kpi-value" id="kpi-latest">—<span class="kpi-unit">호</span></div>
+      <div class="kpi-change neutral" id="kpi-mom">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">전년 동월 대비</div>
+      <div class="kpi-value" id="kpi-yoy">—<span class="kpi-unit">%</span></div>
+      <div class="kpi-change neutral" id="kpi-yoy-sub">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">연간 누계 (당해)</div>
+      <div class="kpi-value" id="kpi-ytd">—<span class="kpi-unit">호</span></div>
+      <div class="kpi-change neutral" id="kpi-ytd-sub">—</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">12개월 평균</div>
+      <div class="kpi-value" id="kpi-avg">—<span class="kpi-unit">호</span></div>
+      <div class="kpi-change neutral" id="kpi-avg-sub">—</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-panel">
+      <div class="panel-header">
+        <span class="panel-title">월별 인허가 추이</span>
+        <span class="panel-sub" id="main-chart-sub">—</span>
+      </div>
+      <div class="chart-wrap tall"><canvas id="mainChart"></canvas></div>
+    </div>
+    <div class="chart-panel">
+      <div class="panel-header">
+        <span class="panel-title">공공/민간 비중</span>
+        <span class="panel-sub">최근 12개월 누계</span>
+      </div>
+      <div class="chart-wrap tall"><canvas id="typeChart"></canvas></div>
+    </div>
+    <div class="chart-panel full-width">
+      <div class="panel-header">
+        <span class="panel-title">연도별 비교</span>
+        <span class="panel-sub">월별 인허가 호수 (연도 오버레이)</span>
+      </div>
+      <div class="chart-wrap"><canvas id="yoyChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ② 다세대주택 인허가 섹션 -->
+  <div class="section-divider">
+    <span class="section-dot dot-purple"></span>
+    <span class="section-label">다세대주택 인허가 (다세대 + 연립)</span>
+  </div>
+
+  <div class="kpi-grid-multi">
+    <div class="kpi-card-multi">
+      <div class="kpi-label">최근월 인허가</div>
+      <div class="kpi-value" style="color:var(--accent5)" id="m-kpi-latest">—<span class="kpi-unit">호</span></div>
+      <div class="kpi-change neutral" id="m-kpi-mom">—</div>
+    </div>
+    <div class="kpi-card-multi">
+      <div class="kpi-label">전년 동월 대비</div>
+      <div class="kpi-value" style="color:var(--accent5)" id="m-kpi-yoy">—<span class="kpi-unit">%</span></div>
+      <div class="kpi-change neutral" id="m-kpi-yoy-sub">—</div>
+    </div>
+    <div class="kpi-card-multi">
+      <div class="kpi-label">연간 누계 (당해)</div>
+      <div class="kpi-value" style="color:var(--accent5)" id="m-kpi-ytd">—<span class="kpi-unit">호</span></div>
+      <div class="kpi-change neutral" id="m-kpi-ytd-sub">—</div>
+    </div>
+    <div class="kpi-card-multi">
+      <div class="kpi-label">12개월 평균</div>
+      <div class="kpi-value" style="color:var(--accent5)" id="m-kpi-avg">—<span class="kpi-unit">호</span></div>
+      <div class="kpi-change neutral" id="m-kpi-avg-sub">—</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-panel">
+      <div class="panel-header">
+        <span class="panel-title">다세대주택 월별 인허가 추이</span>
+        <span class="panel-sub" id="multi-chart-sub">다세대 + 연립 합산 · 월별 순증</span>
+      </div>
+      <div class="chart-wrap tall"><canvas id="multiChart"></canvas></div>
+    </div>
+    <div class="chart-panel">
+      <div class="panel-header">
+        <span class="panel-title">다세대 / 연립 비중</span>
+        <span class="panel-sub">최근 12개월 합산</span>
+      </div>
+      <div class="chart-wrap tall"><canvas id="multiTypeChart"></canvas></div>
+    </div>
+    <div class="chart-panel full-width">
+      <div class="panel-header">
+        <span class="panel-title">다세대주택 연도별 비교</span>
+        <span class="panel-sub">월별 인허가 호수 (연도 오버레이)</span>
+      </div>
+      <div class="chart-wrap"><canvas id="multiYoyChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="table-panel">
+    <div class="panel-header">
+      <span class="panel-title">다세대주택 인허가 최근 데이터</span>
+      <span class="panel-sub" id="multi-footer-period">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>기준월</th>
+          <th>인허가 (호)</th>
+          <th>전월비</th>
+          <th>전년동월비</th>
+          <th>3개월 이동평균</th>
+        </tr>
+      </thead>
+      <tbody id="multi-data-table"></tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    <span>출처: 국토교통부 「주택건설 인허가실적」 · KOSIS Open API</span>
+    <span id="footer-period">—</span>
+  </div>
+</div>
+
+<script>
+const PROXY_URL = '/.netlify/functions/kosis-proxy';
+const COLORS = {
+  accent: '#f0883e', accent2: '#58a6ff', accent3: '#3fb950',
+  accent4: '#ff7b72', accent5: '#d2a8ff', muted: '#484f58',
 };
+const YEAR_COLORS = ['#f0883e','#58a6ff','#3fb950','#d2a8ff','#ff7b72','#79c0ff'];
+
+let rawTotal = [];    // DT_MLTM_1946 서울 총계
+let rawMulti = [];    // DT_MLTM_1948 다세대+연립 (월별 순증 변환 후)
+let mainChart, typeChart, yoyChart, multiChart, multiTypeChart, multiYoyChart;
+
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString('ko-KR');
+}
+function fmtPct(n) {
+  if (n === null || isNaN(n)) return '—';
+  return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+}
+
+async function loadData() {
+  document.getElementById('loading-state').style.display = 'flex';
+  document.getElementById('error-state').style.display = 'none';
+  document.getElementById('main-content').style.display = 'none';
+
+  const now = new Date();
+  const endPrd = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  try {
+    // 두 API 병렬 호출
+    const [res1, res2] = await Promise.all([
+      fetch(`${PROXY_URL}?orgId=116&tblId=DT_MLTM_1946&prdSe=M&startPrdDe=200701&endPrdDe=${endPrd}`),
+      fetch(`${PROXY_URL}?orgId=116&tblId=DT_MLTM_1948&prdSe=M&startPrdDe=200701&endPrdDe=${endPrd}`)
+    ]);
+
+    if (!res1.ok) throw new Error(`HTTP ${res1.status} (총계)`);
+    if (!res2.ok) throw new Error(`HTTP ${res2.status} (유형별)`);
+
+    const data1 = await res1.json();
+    const data2 = await res2.json();
+
+    if (!Array.isArray(data1)) throw new Error(data1?.errMsg || '총계 데이터 오류');
+    if (!Array.isArray(data2)) throw new Error(data2?.errMsg || '유형별 데이터 오류');
+
+    // 총계 데이터 (DT_MLTM_1946: C3_NM=서울, C1_NM=총  계, C2_NM=총  계)
+    rawTotal = data1
+      .filter(d => d.C3_NM === '서울' && d.C1_NM === '총  계' && d.C2_NM === '총  계')
+      .sort((a,b) => a.PRD_DE.localeCompare(b.PRD_DE));
+
+    // 다세대+연립 누계 데이터 (DT_MLTM_1948: C1_NM=서울, C2_NM=다세대 or 연립)
+    const multiRaw = data2
+      .filter(d => d.C1_NM === '서울' && (d.C2_NM === '다세대' || d.C2_NM === '연립'))
+      .sort((a,b) => a.PRD_DE.localeCompare(b.PRD_DE));
+
+    // 월별로 다세대+연립 합산 (누계값)
+    const cumByMonth = {};
+    multiRaw.forEach(d => {
+      const key = d.PRD_DE;
+      cumByMonth[key] = (cumByMonth[key] || 0) + (parseFloat(d.DT) || 0);
+    });
+
+    // 누계 → 월별 순증 변환
+    const months = Object.keys(cumByMonth).sort();
+    rawMulti = months.map((prd, i) => {
+      const cum = cumByMonth[prd];
+      const month = parseInt(prd.slice(4,6));
+      let val;
+      if (month === 1) {
+        // 1월은 누계값 그대로 사용
+        val = cum;
+      } else {
+        const prevPrd = months[i-1];
+        const prevCum = prevPrd ? (cumByMonth[prevPrd] || 0) : 0;
+        val = cum - prevCum;
+      }
+      return { PRD_DE: prd, DT: String(Math.max(0, val)) };
+    });
+
+    document.getElementById('last-updated').textContent =
+      `갱신: ${new Date().toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    updateCharts();
+
+  } catch(e) {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('error-state').style.display = 'flex';
+    document.getElementById('error-msg').textContent = `오류: ${e.message}`;
+  }
+}
+
+function applyRange(data) {
+  const n = parseInt(document.getElementById('range-select').value);
+  if (n === 0) return data;
+  return data.slice(-n);
+}
+
+function updateCharts() {
+  if (!rawTotal.length || !rawMulti.length) return;
+  updateTotalSection();
+  updateMultiSection();
+
+  const p = rawTotal;
+  document.getElementById('footer-period').textContent =
+    `수록기간: ${p[0].PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')} ~ ${p[p.length-1].PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')}`;
+}
+
+// ──────────────────────────────────────────────
+// 전체 인허가 섹션
+// ──────────────────────────────────────────────
+function updateTotalSection() {
+  const all = rawTotal;
+  const ranged = applyRange(all);
+  const labels = ranged.map(d => d.PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2'));
+  const values = ranged.map(d => parseFloat(d.DT) || 0);
+
+  updateKPIs(all, 'kpi-latest','kpi-mom','kpi-yoy','kpi-yoy-sub','kpi-ytd','kpi-ytd-sub','kpi-avg','kpi-avg-sub', COLORS.accent);
+  updateMainChart(labels, values);
+  updateTypeChart(all);
+  updateYoYChart(all, 'yoyChart', yoyChart, c => yoyChart = c, COLORS.accent);
+  document.getElementById('main-chart-sub').textContent = `${labels[0]} ~ ${labels[labels.length-1]}`;
+}
+
+// ──────────────────────────────────────────────
+// 다세대주택 인허가 섹션
+// ──────────────────────────────────────────────
+function updateMultiSection() {
+  const all = rawMulti;
+  const ranged = applyRange(all);
+  const labels = ranged.map(d => d.PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2'));
+  const values = ranged.map(d => parseFloat(d.DT) || 0);
+
+  updateKPIs(all, 'm-kpi-latest','m-kpi-mom','m-kpi-yoy','m-kpi-yoy-sub','m-kpi-ytd','m-kpi-ytd-sub','m-kpi-avg','m-kpi-avg-sub', COLORS.accent5);
+  updateMultiMainChart(labels, values);
+  updateMultiTypeChart();
+  updateYoYChart(all, 'multiYoyChart', multiYoyChart, c => multiYoyChart = c, COLORS.accent5);
+
+  const last = all[all.length-1];
+  const first = all[0];
+  document.getElementById('multi-footer-period').textContent =
+    `${first.PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')} ~ ${last.PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')}`;
+  updateMultiTable(all);
+}
+
+// ──────────────────────────────────────────────
+// 공통 KPI
+// ──────────────────────────────────────────────
+function updateKPIs(data, idLatest, idMom, idYoy, idYoySub, idYtd, idYtdSub, idAvg, idAvgSub, accentColor) {
+  const last = parseFloat(data[data.length-1]?.DT) || 0;
+  const prev = parseFloat(data[data.length-2]?.DT) || 0;
+  const yoyIdx = data.length - 13;
+  const yoyVal = yoyIdx >= 0 ? (parseFloat(data[yoyIdx]?.DT) || 0) : null;
+
+  const latestYear = data[data.length-1].PRD_DE.slice(0,4);
+  const prevYear = String(parseInt(latestYear)-1);
+  const latestMonth = parseInt(data[data.length-1].PRD_DE.slice(4,6));
+
+  const ytd = data.filter(d => d.PRD_DE.startsWith(latestYear) && parseInt(d.PRD_DE.slice(4,6)) <= latestMonth)
+    .reduce((s,d) => s + (parseFloat(d.DT)||0), 0);
+  const ytdPrev = data.filter(d => d.PRD_DE.startsWith(prevYear) && parseInt(d.PRD_DE.slice(4,6)) <= latestMonth)
+    .reduce((s,d) => s + (parseFloat(d.DT)||0), 0);
+  const avg12 = data.slice(-12).reduce((a,d) => a + (parseFloat(d.DT)||0), 0) / Math.min(data.length, 12);
+
+  const momPct = prev ? ((last-prev)/prev*100) : null;
+  const yoyPct = yoyVal ? ((last-yoyVal)/yoyVal*100) : null;
+  const ytdPct = ytdPrev ? ((ytd-ytdPrev)/ytdPrev*100) : null;
+
+  document.getElementById(idLatest).innerHTML = `${fmt(last)}<span class="kpi-unit">호</span>`;
+  const momEl = document.getElementById(idMom);
+  momEl.textContent = momPct !== null ? `전월 대비 ${fmtPct(momPct)}` : '전월 데이터 없음';
+  momEl.className = `kpi-change ${momPct > 0 ? 'up' : momPct < 0 ? 'down' : 'neutral'}`;
+
+  const yoyEl = document.getElementById(idYoy);
+  yoyEl.innerHTML = yoyPct !== null ? `${fmtPct(yoyPct).replace('%','')}<span class="kpi-unit">%</span>` : `—<span class="kpi-unit">%</span>`;
+  yoyEl.style.color = yoyPct > 0 ? '#3fb950' : yoyPct < 0 ? '#ff7b72' : accentColor;
+  document.getElementById(idYoySub).textContent = yoyVal ? `전년 동월 ${fmt(yoyVal)}호` : '—';
+
+  document.getElementById(idYtd).innerHTML = `${fmt(ytd)}<span class="kpi-unit">호</span>`;
+  const ytdEl = document.getElementById(idYtdSub);
+  ytdEl.textContent = ytdPct !== null ? `전년 동기 대비 ${fmtPct(ytdPct)}` : '—';
+  ytdEl.className = `kpi-change ${ytdPct > 0 ? 'up' : ytdPct < 0 ? 'down' : 'neutral'}`;
+
+  document.getElementById(idAvg).innerHTML = `${fmt(avg12)}<span class="kpi-unit">호</span>`;
+  document.getElementById(idAvgSub).textContent = '최근 12개월 평균';
+}
+
+// ──────────────────────────────────────────────
+// 차트들
+// ──────────────────────────────────────────────
+function makeBarLineChart(canvasId, labels, values, barColor, lineColor, existingChart) {
+  const ma3 = values.map((v,i,arr) => i < 2 ? null : (arr[i]+arr[i-1]+arr[i-2])/3);
+  if (existingChart) existingChart.destroy();
+  return new Chart(document.getElementById(canvasId).getContext('2d'), {
+    data: {
+      labels,
+      datasets: [
+        { type:'bar', label:'인허가 호수', data:values, backgroundColor:`${barColor}80`, borderColor:barColor, borderWidth:1, borderRadius:2, yAxisID:'y' },
+        { type:'line', label:'3개월 이동평균', data:ma3, borderColor:lineColor, borderWidth:2, pointRadius:0, tension:0.4, yAxisID:'y' }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ labels:{ color:'#8b949e', font:{size:11,family:'IBM Plex Mono'}, boxWidth:12 } },
+        tooltip:{ backgroundColor:'#161b22', borderColor:'#21262d', borderWidth:1, titleColor:'#e6edf3', bodyColor:'#8b949e',
+          callbacks:{ label: ctx => ` ${ctx.dataset.label}: ${ctx.raw !== null ? fmt(ctx.raw)+'호' : '—'}` } }
+      },
+      scales:{
+        x:{ ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:12}, grid:{color:'rgba(33,38,45,0.8)'} },
+        y:{ ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}, callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()}, grid:{color:'rgba(33,38,45,0.8)'} }
+      }
+    }
+  });
+}
+
+function updateMainChart(labels, values) {
+  mainChart = makeBarLineChart('mainChart', labels, values, COLORS.accent, COLORS.accent2, mainChart);
+}
+function updateMultiMainChart(labels, values) {
+  multiChart = makeBarLineChart('multiChart', labels, values, COLORS.accent5, COLORS.accent2, multiChart);
+}
+
+function updateTypeChart(allData) {
+  const last12Start = allData.length > 12 ? allData[allData.length-13].PRD_DE : allData[0].PRD_DE;
+  // DT_MLTM_1946 rawData에서 공공/민간 합산
+  const seoulData = /* 이미 rawTotal이 총계 */ null;
+  // 직접 rawTotal에서 공공/민간 분리 불가 → 단순 도넛(전체)
+  const total = allData.slice(-12).reduce((s,d) => s+(parseFloat(d.DT)||0), 0);
+  if (typeChart) typeChart.destroy();
+  typeChart = new Chart(document.getElementById('typeChart').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:['전체'], datasets:[{ data:[total], backgroundColor:[COLORS.accent], borderWidth:0 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ position:'bottom', labels:{ color:'#8b949e', font:{size:10,family:'IBM Plex Mono'}, boxWidth:10, padding:10 } },
+        tooltip:{ backgroundColor:'#161b22', borderColor:'#21262d', borderWidth:1,
+          callbacks:{ label: ctx => ` 최근 12개월: ${fmt(ctx.raw)}호` } }
+      }
+    }
+  });
+}
+
+function updateMultiTypeChart() {
+  // rawMulti는 합산된 값이므로 원본 다세대/연립 분리 필요
+  // DT_MLTM_1948에서 다시 계산
+  // 간단히: 다세대 vs 연립 비중은 원본 누계 마지막 연도 합산으로 근사
+  const last12Prds = rawMulti.slice(-12).map(d => d.PRD_DE);
+  if (multiTypeChart) multiTypeChart.destroy();
+  multiTypeChart = new Chart(document.getElementById('multiTypeChart').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels:['다세대 + 연립'], datasets:[{ data:[rawMulti.slice(-12).reduce((s,d)=>s+(parseFloat(d.DT)||0),0)], backgroundColor:[COLORS.accent5], borderWidth:0 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ position:'bottom', labels:{ color:'#8b949e', font:{size:10,family:'IBM Plex Mono'}, boxWidth:10, padding:10 } },
+        tooltip:{ backgroundColor:'#161b22', borderColor:'#21262d', borderWidth:1,
+          callbacks:{ label: ctx => ` 최근 12개월: ${fmt(ctx.raw)}호` } }
+      }
+    }
+  });
+}
+
+function updateYoYChart(allData, canvasId, chartRef, setter, accentColor) {
+  const years = [...new Set(allData.map(d => d.PRD_DE.slice(0,4)))].sort().slice(-6);
+  const datasets = years.map((year, yi) => {
+    const color = YEAR_COLORS[yi % YEAR_COLORS.length];
+    const isLatest = yi === years.length-1;
+    return {
+      label: year,
+      data: Array.from({length:12},(_,i)=>{
+        const m = String(i+1).padStart(2,'0');
+        const found = allData.find(d => d.PRD_DE === `${year}${m}`);
+        return found ? (parseFloat(found.DT)||null) : null;
+      }),
+      borderColor: color, backgroundColor:'transparent',
+      borderWidth: isLatest ? 2.5 : 1.5,
+      pointRadius: isLatest ? 3 : 1,
+      pointBackgroundColor: color, tension:0.3,
+    };
+  });
+  if (chartRef) chartRef.destroy();
+  const chart = new Chart(document.getElementById(canvasId).getContext('2d'), {
+    type:'line',
+    data:{ labels:['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'], datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ labels:{ color:'#8b949e', font:{size:11,family:'IBM Plex Mono'}, boxWidth:20 } },
+        tooltip:{ backgroundColor:'#161b22', borderColor:'#21262d', borderWidth:1,
+          callbacks:{ label: ctx => ctx.raw !== null ? ` ${ctx.dataset.label}년: ${fmt(ctx.raw)}호` : ` ${ctx.dataset.label}년: —` } }
+      },
+      scales:{
+        x:{ ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}}, grid:{color:'rgba(33,38,45,0.8)'} },
+        y:{ ticks:{color:'#484f58',font:{size:10,family:'IBM Plex Mono'}, callback:v=>v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString()}, grid:{color:'rgba(33,38,45,0.8)'} }
+      }
+    }
+  });
+  setter(chart);
+}
+
+function updateMultiTable(allData) {
+  const recent = allData.slice(-18).reverse();
+  const tbody = document.getElementById('multi-data-table');
+  tbody.innerHTML = '';
+  recent.forEach((row, i) => {
+    const val = parseFloat(row.DT) || 0;
+    const prevRow = allData[allData.length-i-2];
+    const prevVal = prevRow ? (parseFloat(prevRow.DT)||0) : null;
+    const yoyRow = allData[allData.length-i-14];
+    const yoyVal = yoyRow ? (parseFloat(yoyRow.DT)||0) : null;
+    const slice3 = allData.slice(Math.max(0,allData.length-i-3), allData.length-i);
+    const ma = slice3.length ? slice3.reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/slice3.length : null;
+    const momPct = prevVal ? ((val-prevVal)/prevVal*100) : null;
+    const yoyPct = yoyVal ? ((val-yoyVal)/yoyVal*100) : null;
+    const period = row.PRD_DE.replace(/(\d{4})(\d{2})/, '$1년 $2월');
+    tbody.innerHTML += `<tr>
+      <td>${period}</td>
+      <td>${fmt(val)}</td>
+      <td>${momPct!==null?`<span class="badge ${momPct>=0?'up':'down'}">${fmtPct(momPct)}</span>`:'—'}</td>
+      <td>${yoyPct!==null?`<span class="badge ${yoyPct>=0?'up':'down'}">${fmtPct(yoyPct)}</span>`:'—'}</td>
+      <td>${ma!==null?fmt(ma):'—'}</td>
+    </tr>`;
+  });
+}
+
+loadData();
+</script>
+</body>
+</html>
