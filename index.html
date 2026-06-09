@@ -135,12 +135,21 @@
         <div class="chart-wrap"><canvas id="chart-multi-type"></canvas></div>
       </div>
     </div>
-    <div class="chart-panel">
-      <div class="panel-header">
-        <span class="panel-title">연도별 비교</span>
-        <span class="panel-sub">월별 인허가 호수 (연도 오버레이)</span>
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="panel-header">
+          <span class="panel-title">연간 인허가 합계</span>
+          <span class="panel-sub">연도별 연간 총 인허가 호수</span>
+        </div>
+        <div class="chart-wrap short"><canvas id="chart-multi-annual"></canvas></div>
       </div>
-      <div class="chart-wrap short"><canvas id="chart-multi-yoy"></canvas></div>
+      <div class="chart-panel">
+        <div class="panel-header">
+          <span class="panel-title">연도별 월별 비교</span>
+          <span class="panel-sub">월별 인허가 (연도 오버레이)</span>
+        </div>
+        <div class="chart-wrap short"><canvas id="chart-multi-yoy"></canvas></div>
+      </div>
     </div>
     <table>
       <thead><tr>
@@ -171,11 +180,18 @@
       </div>
       <div class="chart-panel">
         <div class="panel-header">
-          <span class="panel-title">연도별 비교</span>
-          <span class="panel-sub">월별 인허가 호수</span>
+          <span class="panel-title">연도별 월별 비교</span>
+          <span class="panel-sub">월별 인허가 (연도 오버레이)</span>
         </div>
         <div class="chart-wrap"><canvas id="chart-apt-yoy"></canvas></div>
       </div>
+    </div>
+    <div class="chart-panel" style="margin-top:24px">
+      <div class="panel-header">
+        <span class="panel-title">연간 인허가 합계</span>
+        <span class="panel-sub">연도별 연간 총 인허가 호수</span>
+      </div>
+      <div class="chart-wrap short"><canvas id="chart-apt-annual"></canvas></div>
     </div>
     <table>
       <thead><tr>
@@ -407,6 +423,53 @@ function renderTable(tbodyId, data, color) {
   });
 }
 
+function renderAnnual(canvasId, data, barColor) {
+  // 연도별 합산 (진행중인 연도 포함, 단 현재연도는 점선 처리)
+  const yearMap = {};
+  data.forEach(d => {
+    const y = d.PRD_DE.slice(0,4);
+    yearMap[y] = (yearMap[y]||0) + (parseFloat(d.DT)||0);
+  });
+  const years = Object.keys(yearMap).sort();
+  const currentYear = String(new Date().getFullYear());
+  const values = years.map(y => yearMap[y]);
+
+  if(charts[canvasId]) charts[canvasId].destroy();
+  charts[canvasId] = new Chart(document.getElementById(canvasId).getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: years.map(y => y+'년'),
+      datasets: [{
+        label: '연간 인허가',
+        data: values,
+        backgroundColor: years.map(y => y===currentYear ? `${barColor}40` : `${barColor}90`),
+        borderColor: years.map(y => y===currentYear ? barColor+'99' : barColor),
+        borderWidth: years.map(y => y===currentYear ? 1.5 : 0),
+        borderRadius: 3,
+        borderDash: [],
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#161b22', borderColor: '#21262d', borderWidth: 1,
+          titleColor: '#e6edf3', bodyColor: '#8b949e',
+          callbacks: {
+            label: c => ` ${c.label.replace('년','')}: ${fmt(c.raw)}호${c.label.includes(currentYear)?' (진행중)':''}`
+          }
+        },
+        annotation: {}
+      },
+      scales: {
+        x: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' } }, grid: { color: 'rgba(33,38,45,.8)' } },
+        y: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' }, callback: v => v>=10000?(v/10000).toFixed(0)+'만':v.toLocaleString() }, grid: { color: 'rgba(33,38,45,.8)' } }
+      }
+    }
+  });
+}
+
 function renderSection(key, data, barColor, lineColor) {
   const ranged = applyRange(data);
   const labels = ranged.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
@@ -415,6 +478,7 @@ function renderSection(key, data, barColor, lineColor) {
   renderKPI(`kpi-${key}`, data, barColor);
   renderBarLine(`chart-${key}-main`, labels, values, barColor, lineColor);
   document.getElementById(`sub-${key}`).textContent = `${labels[0]} ~ ${labels[labels.length-1]}`;
+  renderAnnual(`chart-${key}-annual`, data, barColor);
   renderYoY(`chart-${key}-yoy`, data);
   renderTable(`table-${key}`, data, barColor);
 
