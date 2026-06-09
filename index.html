@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>주택건설 인허가실적 대시보드</title>
+<title>서울 주택건설 인허가실적 대시보드</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
@@ -16,6 +16,7 @@
     --accent2: #58a6ff;
     --accent3: #3fb950;
     --accent4: #ff7b72;
+    --accent5: #d2a8ff;
     --text-primary: #e6edf3;
     --text-secondary: #8b949e;
     --text-muted: #484f58;
@@ -28,10 +29,8 @@
     color: var(--text-primary);
     font-family: 'Noto Sans KR', sans-serif;
     min-height: 100vh;
-    padding: 0;
   }
 
-  /* HEADER */
   .header {
     border-bottom: 1px solid var(--border);
     padding: 20px 32px;
@@ -44,99 +43,35 @@
     z-index: 100;
   }
 
-  .header-left {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-  }
+  .header-left { display: flex; align-items: baseline; gap: 12px; }
+  .header-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+  .header-sub { font-size: 12px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
+  .last-updated { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
 
-  .header h1 {
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-    color: var(--text-primary);
-  }
-
-  .header .sub {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .last-updated {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  .refresh-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    font-family: 'Noto Sans KR', sans-serif;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .refresh-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .refresh-icon { font-size: 13px; }
-
-  /* LOADING / ERROR */
-  .status-overlay {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 60vh;
-    gap: 16px;
+  .loading-state, .error-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 60vh; gap: 16px;
   }
 
   .spinner {
-    width: 36px;
-    height: 36px;
+    width: 36px; height: 36px;
     border: 3px solid var(--border);
     border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
-
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .status-text {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-family: 'IBM Plex Mono', monospace;
+  .loading-text { color: var(--text-secondary); font-size: 14px; }
+  .error-title { color: var(--accent4); font-size: 16px; font-weight: 600; }
+  .error-msg { color: var(--text-secondary); font-size: 13px; }
+  .retry-btn {
+    margin-top: 8px; padding: 8px 20px;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-primary); border-radius: 6px; cursor: pointer; font-size: 13px;
   }
+  .retry-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-  .error-box {
-    background: rgba(255,123,114,0.08);
-    border: 1px solid rgba(255,123,114,0.3);
-    border-radius: 8px;
-    padding: 20px 28px;
-    max-width: 480px;
-    text-align: center;
-  }
-
-  .error-box h3 { color: var(--accent4); margin-bottom: 8px; font-size: 14px; }
-  .error-box p { color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
-
-  /* CONTROLS */
   .controls {
     padding: 16px 32px;
     border-bottom: 1px solid var(--border);
@@ -146,56 +81,15 @@
     flex-wrap: wrap;
   }
 
-  .control-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-    margin-right: 4px;
-  }
-
-  .tab-group {
-    display: flex;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-
-  .tab-btn {
-    background: none;
-    border: none;
-    padding: 6px 14px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-family: 'Noto Sans KR', sans-serif;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-
-  .tab-btn.active {
-    background: var(--accent);
-    color: #fff;
-    font-weight: 500;
-  }
-
-  .tab-btn:hover:not(.active) { color: var(--text-primary); }
-
-  .separator { width: 1px; height: 20px; background: var(--border); }
+  .control-label { font-size: 12px; color: var(--text-muted); }
 
   .range-select {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: 'Noto Sans KR', sans-serif;
-    cursor: pointer;
-    outline: none;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text-primary); padding: 6px 12px; border-radius: 6px;
+    font-size: 13px; cursor: pointer;
   }
+  .range-select:focus { outline: none; border-color: var(--accent); }
 
-  /* KPI CARDS */
   .kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -206,158 +100,91 @@
 
   .kpi-card {
     background: var(--bg);
-    padding: 20px 28px;
+    padding: 24px 28px;
   }
 
-  .kpi-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .kpi-value {
-    font-size: 28px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 600;
-    color: var(--text-primary);
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-
-  .kpi-unit {
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--text-secondary);
-    margin-left: 2px;
-  }
-
-  .kpi-change {
-    font-size: 11px;
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
+  .kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text-primary); }
+  .kpi-unit { font-size: 13px; color: var(--text-secondary); margin-left: 4px; }
+  .kpi-change { font-size: 12px; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; }
   .kpi-change.up { color: var(--accent3); }
   .kpi-change.down { color: var(--accent4); }
   .kpi-change.neutral { color: var(--text-muted); }
 
-  /* CHARTS */
   .charts-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 1px;
     background: var(--border);
-    flex: 1;
+    padding: 0;
+    border-bottom: 1px solid var(--border);
   }
 
   .chart-panel {
     background: var(--bg);
-    padding: 24px 28px;
+    padding: 24px;
   }
 
   .chart-panel.full-width {
     grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
   }
 
   .panel-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+    display: flex; align-items: baseline; justify-content: space-between;
     margin-bottom: 20px;
   }
 
-  .panel-title {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-primary);
-  }
+  .panel-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .panel-sub { font-size: 11px; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; }
 
-  .panel-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-  }
+  .chart-wrap { position: relative; height: 260px; }
+  .chart-wrap.tall { height: 300px; }
 
-  .chart-wrap {
-    position: relative;
-    height: 260px;
-  }
-
-  .chart-wrap.tall { height: 320px; }
-
-  /* DATA TABLE */
   .table-panel {
-    background: var(--bg);
-    border-top: 1px solid var(--border);
-    padding: 24px 28px;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-  }
-
-  thead th {
-    text-align: left;
-    padding: 8px 12px;
-    font-size: 10px;
-    color: var(--text-muted);
-    font-family: 'IBM Plex Mono', monospace;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
+    padding: 24px 32px;
     border-bottom: 1px solid var(--border);
   }
 
-  tbody td {
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(33,38,45,0.6);
-    color: var(--text-secondary);
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; color: var(--text-muted);
     font-family: 'IBM Plex Mono', monospace;
+    font-weight: 400;
   }
-
-  tbody tr:hover td { background: var(--surface); color: var(--text-primary); }
-
-  tbody td:first-child { color: var(--text-primary); font-weight: 500; }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(33,38,45,0.5);
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-secondary);
+  }
+  tr:hover td { background: rgba(22,27,34,0.8); }
+  td:first-child { color: var(--text-primary); }
+  td:nth-child(2) { color: var(--accent); font-weight: 600; }
 
   .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-family: 'IBM Plex Mono', monospace;
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace;
   }
+  .badge.up { background: rgba(63,185,80,0.15); color: var(--accent3); }
+  .badge.down { background: rgba(255,123,114,0.15); color: var(--accent4); }
 
-  .badge.up { background: rgba(63,185,80,0.12); color: var(--accent3); }
-  .badge.down { background: rgba(255,123,114,0.12); color: var(--accent4); }
-
-  /* FOOTER */
   .footer {
-    padding: 14px 32px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .footer-text {
-    font-size: 10px;
-    color: var(--text-muted);
+    padding: 16px 32px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--text-muted);
     font-family: 'IBM Plex Mono', monospace;
   }
 
-  /* CONTENT */
-  #main-content { display: none; }
-
-  @media (max-width: 900px) {
+  @media (max-width: 768px) {
     .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .charts-grid { grid-template-columns: 1fr; }
-    .header { padding: 14px 16px; }
+    .header { padding: 16px; }
     .controls { padding: 12px 16px; }
-    .chart-panel { padding: 16px; }
-    .kpi-card { padding: 14px 16px; }
+    .table-panel { padding: 16px; }
+    .footer { flex-direction: column; gap: 4px; padding: 12px 16px; }
   }
 </style>
 </head>
@@ -365,41 +192,28 @@
 
 <div class="header">
   <div class="header-left">
-    <h1>주택건설 인허가실적</h1>
-    <span class="sub">국토교통부 · KOSIS DT_MLTM_1946</span>
+    <span class="header-title">서울 주택건설 인허가실적</span>
+    <span class="header-sub">KOSIS · 국토교통부</span>
   </div>
-  <div class="header-right">
-    <span class="last-updated" id="last-updated">—</span>
-    <button class="refresh-btn" onclick="loadData()">
-      <span class="refresh-icon">↻</span> 새로고침
-    </button>
-  </div>
+  <span class="last-updated" id="last-updated">—</span>
 </div>
 
-<div id="loading-state" class="status-overlay">
+<!-- 로딩 -->
+<div class="loading-state" id="loading-state">
   <div class="spinner"></div>
-  <div class="status-text">KOSIS API 데이터 불러오는 중...</div>
+  <div class="loading-text">데이터 불러오는 중...</div>
 </div>
 
-<div id="error-state" class="status-overlay" style="display:none">
-  <div class="error-box">
-    <h3>데이터 로드 실패</h3>
-    <p id="error-msg">API 호출 중 오류가 발생했습니다.</p>
-  </div>
+<!-- 에러 -->
+<div class="error-state" id="error-state" style="display:none">
+  <div class="error-title">데이터 로드 실패</div>
+  <div class="error-msg" id="error-msg"></div>
+  <button class="retry-btn" onclick="loadData()">다시 시도</button>
 </div>
 
-<div id="main-content">
-  <!-- CONTROLS -->
+<!-- 메인 -->
+<div id="main-content" style="display:none">
   <div class="controls">
-    <span class="control-label">지역</span>
-    <div class="tab-group" id="region-tabs">
-      <button class="tab-btn active" onclick="setRegion('전국', this)">전국</button>
-      <button class="tab-btn" onclick="setRegion('서울특별시', this)">서울</button>
-      <button class="tab-btn" onclick="setRegion('경기도', this)">경기</button>
-      <button class="tab-btn" onclick="setRegion('인천광역시', this)">인천</button>
-      <button class="tab-btn" onclick="setRegion('부산광역시', this)">부산</button>
-    </div>
-    <div class="separator"></div>
     <span class="control-label">기간</span>
     <select class="range-select" id="range-select" onchange="updateCharts()">
       <option value="12">최근 12개월</option>
@@ -409,7 +223,6 @@
     </select>
   </div>
 
-  <!-- KPI -->
   <div class="kpi-grid">
     <div class="kpi-card">
       <div class="kpi-label">최근월 인허가</div>
@@ -433,7 +246,6 @@
     </div>
   </div>
 
-  <!-- CHARTS -->
   <div class="charts-grid">
     <div class="chart-panel">
       <div class="panel-header">
@@ -446,8 +258,8 @@
     </div>
     <div class="chart-panel">
       <div class="panel-header">
-        <span class="panel-title">주택유형별 비중</span>
-        <span class="panel-sub" id="type-chart-sub">최근 12개월 누계</span>
+        <span class="panel-title">공공/민간 비중</span>
+        <span class="panel-sub">최근 12개월 누계</span>
       </div>
       <div class="chart-wrap tall">
         <canvas id="typeChart"></canvas>
@@ -464,11 +276,10 @@
     </div>
   </div>
 
-  <!-- TABLE -->
   <div class="table-panel">
     <div class="panel-header">
-      <span class="panel-title">최근 데이터</span>
-      <span class="panel-sub" id="table-region-label">—</span>
+      <span class="panel-title">최근 데이터 — 서울</span>
+      <span class="panel-sub" id="footer-period">—</span>
     </div>
     <table>
       <thead>
@@ -484,10 +295,9 @@
     </table>
   </div>
 
-  <!-- FOOTER -->
   <div class="footer">
-    <span class="footer-text">출처: 국토교통부 「주택건설 인허가실적」 · KOSIS 공유서비스 Open API</span>
-    <span class="footer-text" id="footer-period">—</span>
+    <span>출처: 국토교통부 「주택건설 인허가실적」 · KOSIS Open API</span>
+    <span id="last-updated-footer">—</span>
   </div>
 </div>
 
@@ -497,19 +307,12 @@ const ORG_ID = '116';
 const TBL_ID = 'DT_MLTM_1946';
 
 let rawData = [];
-let currentRegion = '전국';
 let mainChart, typeChart, yoyChart;
 
-// 색상 팔레트
 const COLORS = {
-  accent: '#f0883e',
-  accent2: '#58a6ff',
-  accent3: '#3fb950',
-  accent4: '#ff7b72',
-  accent5: '#d2a8ff',
-  muted: '#484f58',
+  accent: '#f0883e', accent2: '#58a6ff', accent3: '#3fb950',
+  accent4: '#ff7b72', accent5: '#d2a8ff', muted: '#484f58',
 };
-
 const YEAR_COLORS = ['#f0883e','#58a6ff','#3fb950','#d2a8ff','#ff7b72','#79c0ff'];
 
 async function loadData() {
@@ -518,12 +321,8 @@ async function loadData() {
   document.getElementById('main-content').style.display = 'none';
 
   const now = new Date();
-  const endYear = now.getFullYear();
-  const startYear = endYear - 5;
-  const startPrd = `${startYear}01`;
-  const endPrd = `${endYear}${String(now.getMonth()+1).padStart(2,'0')}`;
-
-  const url = `${PROXY_URL}?orgId=${ORG_ID}&tblId=${TBL_ID}&prdSe=M&startPrdDe=${startPrd}&endPrdDe=${endPrd}`;
+  const endPrd = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const url = `${PROXY_URL}?orgId=${ORG_ID}&tblId=${TBL_ID}&prdSe=M&startPrdDe=200701&endPrdDe=${endPrd}`;
 
   try {
     const res = await fetch(url);
@@ -531,12 +330,12 @@ async function loadData() {
     const data = await res.json();
 
     if (!Array.isArray(data)) {
-      const errCode = data?.errMsg || JSON.stringify(data);
-      throw new Error(errCode);
+      throw new Error(data?.errMsg || JSON.stringify(data));
     }
 
     rawData = data;
-    document.getElementById('last-updated').textContent = `갱신: ${new Date().toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+    document.getElementById('last-updated').textContent =
+      `갱신: ${new Date().toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
     document.getElementById('loading-state').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
     updateCharts();
@@ -548,18 +347,15 @@ async function loadData() {
   }
 }
 
-function setRegion(region, btn) {
-  currentRegion = region;
-  document.querySelectorAll('#region-tabs .tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  updateCharts();
-}
-
-function getFilteredData() {
-  // 지역 필터 + 총계 항목(T1)만
-  const regionData = rawData.filter(d => d.C1_NM === currentRegion && d.ITM_ID === 'T1');
-  // 기간순 정렬
-  return regionData.sort((a,b) => a.PRD_DE.localeCompare(b.PRD_DE));
+// 서울 총계 데이터만 추출 (C3_NM=서울, C1_NM=총계, C2_NM=총계)
+function getSeoulTotal() {
+  return rawData
+    .filter(d =>
+      d.C3_NM === '서울' &&
+      d.C1_NM === '총  계' &&
+      d.C2_NM === '총  계'
+    )
+    .sort((a,b) => a.PRD_DE.localeCompare(b.PRD_DE));
 }
 
 function applyRange(data) {
@@ -569,7 +365,7 @@ function applyRange(data) {
 }
 
 function fmt(n) {
-  if (n === null || isNaN(n)) return '—';
+  if (n === null || n === undefined || isNaN(n)) return '—';
   return Math.round(n).toLocaleString('ko-KR');
 }
 
@@ -579,8 +375,13 @@ function fmtPct(n) {
 }
 
 function updateCharts() {
-  const allData = getFilteredData();
-  if (!allData.length) return;
+  const allData = getSeoulTotal();
+  if (!allData.length) {
+    document.getElementById('error-state').style.display = 'flex';
+    document.getElementById('error-msg').textContent = '서울 총계 데이터를 찾을 수 없습니다.';
+    document.getElementById('main-content').style.display = 'none';
+    return;
+  }
 
   const ranged = applyRange(allData);
   const labels = ranged.map(d => d.PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2'));
@@ -593,9 +394,8 @@ function updateCharts() {
   updateTable(allData);
 
   document.getElementById('main-chart-sub').textContent = `${labels[0]} ~ ${labels[labels.length-1]}`;
-  document.getElementById('table-region-label').textContent = currentRegion;
   document.getElementById('footer-period').textContent =
-    `수록 기간: ${allData[0].PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')} ~ ${allData[allData.length-1].PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')}`;
+    `${allData[0].PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')} ~ ${allData[allData.length-1].PRD_DE.replace(/(\d{4})(\d{2})/, '$1.$2')}`;
 }
 
 function updateKPIs(data) {
@@ -604,17 +404,15 @@ function updateKPIs(data) {
   const yoyIdx = data.length - 13;
   const yoyVal = yoyIdx >= 0 ? (parseFloat(data[yoyIdx]?.DT) || 0) : null;
 
-  // 연간 누계
   const latestYear = data[data.length-1].PRD_DE.slice(0,4);
   const prevYear = String(parseInt(latestYear)-1);
-  const latestMonthNum = parseInt(data[data.length-1].PRD_DE.slice(4,6));
+  const latestMonth = parseInt(data[data.length-1].PRD_DE.slice(4,6));
 
-  const ytd = data.filter(d => d.PRD_DE.startsWith(latestYear) && parseInt(d.PRD_DE.slice(4,6)) <= latestMonthNum)
+  const ytd = data.filter(d => d.PRD_DE.startsWith(latestYear) && parseInt(d.PRD_DE.slice(4,6)) <= latestMonth)
     .reduce((s,d) => s + (parseFloat(d.DT)||0), 0);
-  const ytdPrev = data.filter(d => d.PRD_DE.startsWith(prevYear) && parseInt(d.PRD_DE.slice(4,6)) <= latestMonthNum)
+  const ytdPrev = data.filter(d => d.PRD_DE.startsWith(prevYear) && parseInt(d.PRD_DE.slice(4,6)) <= latestMonth)
     .reduce((s,d) => s + (parseFloat(d.DT)||0), 0);
 
-  // 12개월 평균
   const last12 = data.slice(-12).map(d => parseFloat(d.DT)||0);
   const avg12 = last12.reduce((a,b)=>a+b,0) / last12.length;
 
@@ -638,140 +436,83 @@ function updateKPIs(data) {
   ytdSubEl.className = `kpi-change ${ytdPct > 0 ? 'up' : ytdPct < 0 ? 'down' : 'neutral'}`;
 
   document.getElementById('kpi-avg').innerHTML = `${fmt(avg12)}<span class="kpi-unit">호</span>`;
-  document.getElementById('kpi-avg-sub').textContent = `${latestYear}년 이전 12개월`;
+  document.getElementById('kpi-avg-sub').textContent = `최근 12개월 평균`;
 }
 
 function updateMainChart(labels, values) {
-  const ctx = document.getElementById('mainChart').getContext('2d');
-
-  // 3개월 이동평균
   const ma3 = values.map((v,i,arr) => {
     if (i < 2) return null;
     return (arr[i] + arr[i-1] + arr[i-2]) / 3;
   });
 
   if (mainChart) mainChart.destroy();
-  mainChart = new Chart(ctx, {
+  mainChart = new Chart(document.getElementById('mainChart').getContext('2d'), {
     data: {
       labels,
       datasets: [
         {
-          type: 'bar',
-          label: '인허가 호수',
-          data: values,
-          backgroundColor: values.map(v => v > 0 ? 'rgba(240,136,62,0.5)' : 'rgba(255,123,114,0.4)'),
-          borderColor: values.map(v => v > 0 ? COLORS.accent : COLORS.accent4),
-          borderWidth: 1,
-          borderRadius: 2,
-          yAxisID: 'y',
+          type: 'bar', label: '인허가 호수', data: values,
+          backgroundColor: 'rgba(240,136,62,0.5)',
+          borderColor: COLORS.accent, borderWidth: 1, borderRadius: 2, yAxisID: 'y',
         },
         {
-          type: 'line',
-          label: '3개월 이동평균',
-          data: ma3,
-          borderColor: COLORS.accent2,
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.4,
-          yAxisID: 'y',
+          type: 'line', label: '3개월 이동평균', data: ma3,
+          borderColor: COLORS.accent2, borderWidth: 2, pointRadius: 0, tension: 0.4, yAxisID: 'y',
         }
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          labels: { color: '#8b949e', font: { size: 11, family: 'IBM Plex Mono' }, boxWidth: 12 }
-        },
+        legend: { labels: { color: '#8b949e', font: { size: 11, family: 'IBM Plex Mono' }, boxWidth: 12 } },
         tooltip: {
-          backgroundColor: '#161b22',
-          borderColor: '#21262d',
-          borderWidth: 1,
-          titleColor: '#e6edf3',
-          bodyColor: '#8b949e',
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.raw !== null ? fmt(ctx.raw) + '호' : '—'}`
-          }
+          backgroundColor: '#161b22', borderColor: '#21262d', borderWidth: 1,
+          titleColor: '#e6edf3', bodyColor: '#8b949e',
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw !== null ? fmt(ctx.raw)+'호' : '—'}` }
         }
       },
       scales: {
-        x: {
-          ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' }, maxTicksLimit: 12 },
-          grid: { color: 'rgba(33,38,45,0.8)' }
-        },
-        y: {
-          ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' },
-            callback: v => v >= 10000 ? (v/10000).toFixed(0)+'만' : v.toLocaleString() },
-          grid: { color: 'rgba(33,38,45,0.8)' }
-        }
+        x: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' }, maxTicksLimit: 12 }, grid: { color: 'rgba(33,38,45,0.8)' } },
+        y: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' }, callback: v => v >= 10000 ? (v/10000).toFixed(0)+'만' : v.toLocaleString() }, grid: { color: 'rgba(33,38,45,0.8)' } }
       }
     }
   });
 }
 
 function updateTypeChart(allData) {
-  // 주택유형별 데이터 (ITM_ID별)
+  // 공공부문 vs 민간부문 (C1_NM 기준)
   const last12Start = allData.length > 12 ? allData[allData.length-13].PRD_DE : allData[0].PRD_DE;
 
-  // 전체 raw data에서 유형별로 그룹
-  const typeMap = {};
-  rawData.filter(d => d.C1_NM === currentRegion && d.PRD_DE >= last12Start).forEach(d => {
-    const name = d.ITM_NM;
-    if (!name || name === '합계') return;
-    typeMap[name] = (typeMap[name] || 0) + (parseFloat(d.DT) || 0);
-  });
+  const publicSum = rawData.filter(d =>
+    d.C3_NM === '서울' && d.C1_NM === '공공부문' && d.C2_NM === '총  계' && d.PRD_DE >= last12Start
+  ).reduce((s,d) => s + (parseFloat(d.DT)||0), 0);
 
-  const entries = Object.entries(typeMap).filter(([k]) => k !== '합계').sort((a,b) => b[1]-a[1]);
+  const privateSum = rawData.filter(d =>
+    d.C3_NM === '서울' && d.C1_NM === '민간부문' && d.C2_NM === '총  계' && d.PRD_DE >= last12Start
+  ).reduce((s,d) => s + (parseFloat(d.DT)||0), 0);
 
-  const ctx = document.getElementById('typeChart').getContext('2d');
+  const entries = [['공공부문', publicSum], ['민간부문', privateSum]].filter(([,v]) => v > 0);
+  const total = entries.reduce((s,[,v]) => s+v, 0);
+
   if (typeChart) typeChart.destroy();
-
-  if (!entries.length) {
-    // 단일 항목만 있을 경우 — 총계만 표시
-    const total = allData.slice(-12).reduce((s,d) => s + (parseFloat(d.DT)||0), 0);
-    typeChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['전체'],
-        datasets: [{ data: [total], backgroundColor: [COLORS.accent], borderWidth: 0 }]
-      },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#8b949e', font: {size:11} } } }
-      }
-    });
-    return;
-  }
-
-  const palette = [COLORS.accent, COLORS.accent2, COLORS.accent3, COLORS.accent4, COLORS.accent5, COLORS.muted];
-  typeChart = new Chart(ctx, {
+  typeChart = new Chart(document.getElementById('typeChart').getContext('2d'), {
     type: 'doughnut',
     data: {
       labels: entries.map(([k])=>k),
       datasets: [{
         data: entries.map(([,v])=>v),
-        backgroundColor: palette.slice(0, entries.length),
-        borderWidth: 0,
-        hoverOffset: 6,
+        backgroundColor: [COLORS.accent2, COLORS.accent],
+        borderWidth: 0, hoverOffset: 6,
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '62%',
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
       plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#8b949e', font: { size: 10, family: 'IBM Plex Mono' }, boxWidth: 10, padding: 10 }
-        },
+        legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 10, family: 'IBM Plex Mono' }, boxWidth: 10, padding: 10 } },
         tooltip: {
-          backgroundColor: '#161b22',
-          borderColor: '#21262d',
-          borderWidth: 1,
-          callbacks: {
-            label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}호 (${(ctx.raw/entries.reduce((a,[,v])=>a+v,0)*100).toFixed(1)}%)`
-          }
+          backgroundColor: '#161b22', borderColor: '#21262d', borderWidth: 1,
+          callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.raw)}호 (${total ? (ctx.raw/total*100).toFixed(1) : 0}%)` }
         }
       }
     }
@@ -779,65 +520,44 @@ function updateTypeChart(allData) {
 }
 
 function updateYoYChart(allData) {
-  // 연도별 오버레이 (1~12월)
-  const years = [...new Set(allData.map(d => d.PRD_DE.slice(0,4)))].sort().slice(-5);
+  const years = [...new Set(allData.map(d => d.PRD_DE.slice(0,4)))].sort().slice(-6);
   const months = Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'));
 
   const datasets = years.map((year, yi) => {
     const color = YEAR_COLORS[yi % YEAR_COLORS.length];
-    const yearData = months.map(m => {
-      const found = allData.find(d => d.PRD_DE === `${year}${m}`);
-      return found ? (parseFloat(found.DT) || null) : null;
-    });
+    const isLatest = yi === years.length - 1;
     return {
       label: year,
-      data: yearData,
+      data: months.map(m => {
+        const found = allData.find(d => d.PRD_DE === `${year}${m}`);
+        return found ? (parseFloat(found.DT) || null) : null;
+      }),
       borderColor: color,
       backgroundColor: 'transparent',
-      borderWidth: yi === years.length-1 ? 2.5 : 1.5,
-      pointRadius: yi === years.length-1 ? 3 : 2,
+      borderWidth: isLatest ? 2.5 : 1.5,
+      pointRadius: isLatest ? 3 : 1,
       pointBackgroundColor: color,
       tension: 0.3,
-      borderDash: yi === years.length-1 ? [] : [],
-      opacity: yi === years.length-1 ? 1 : 0.5,
     };
   });
 
-  const ctx = document.getElementById('yoyChart').getContext('2d');
   if (yoyChart) yoyChart.destroy();
-  yoyChart = new Chart(ctx, {
+  yoyChart = new Chart(document.getElementById('yoyChart').getContext('2d'), {
     type: 'line',
-    data: {
-      labels: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
-      datasets,
-    },
+    data: { labels: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'], datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          labels: { color: '#8b949e', font: { size: 11, family: 'IBM Plex Mono' }, boxWidth: 20 }
-        },
+        legend: { labels: { color: '#8b949e', font: { size: 11, family: 'IBM Plex Mono' }, boxWidth: 20 } },
         tooltip: {
-          backgroundColor: '#161b22',
-          borderColor: '#21262d',
-          borderWidth: 1,
-          callbacks: {
-            label: ctx => ctx.raw !== null ? ` ${ctx.dataset.label}년: ${fmt(ctx.raw)}호` : ` ${ctx.dataset.label}년: —`
-          }
+          backgroundColor: '#161b22', borderColor: '#21262d', borderWidth: 1,
+          callbacks: { label: ctx => ctx.raw !== null ? ` ${ctx.dataset.label}년: ${fmt(ctx.raw)}호` : ` ${ctx.dataset.label}년: —` }
         }
       },
       scales: {
-        x: {
-          ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' } },
-          grid: { color: 'rgba(33,38,45,0.8)' }
-        },
-        y: {
-          ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' },
-            callback: v => v >= 10000 ? (v/10000).toFixed(0)+'만' : v.toLocaleString() },
-          grid: { color: 'rgba(33,38,45,0.8)' }
-        }
+        x: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' } }, grid: { color: 'rgba(33,38,45,0.8)' } },
+        y: { ticks: { color: '#484f58', font: { size: 10, family: 'IBM Plex Mono' }, callback: v => v >= 10000 ? (v/10000).toFixed(0)+'만' : v.toLocaleString() }, grid: { color: 'rgba(33,38,45,0.8)' } }
       }
     }
   });
@@ -854,34 +574,24 @@ function updateTable(allData) {
     const prevVal = prevRow ? (parseFloat(prevRow.DT) || 0) : null;
     const yoyRow = allData[allData.length - i - 14];
     const yoyVal = yoyRow ? (parseFloat(yoyRow.DT) || 0) : null;
-
-    // 3개월 이동평균
     const slice3 = allData.slice(Math.max(0, allData.length-i-3), allData.length-i);
     const ma = slice3.length ? slice3.reduce((s,d)=>s+(parseFloat(d.DT)||0),0)/slice3.length : null;
 
     const momPct = prevVal ? ((val-prevVal)/prevVal*100) : null;
     const yoyPct = yoyVal ? ((val-yoyVal)/yoyVal*100) : null;
-
     const period = row.PRD_DE.replace(/(\d{4})(\d{2})/, '$1년 $2월');
-    const momBadge = momPct !== null
-      ? `<span class="badge ${momPct>=0?'up':'down'}">${fmtPct(momPct)}</span>`
-      : '—';
-    const yoyBadge = yoyPct !== null
-      ? `<span class="badge ${yoyPct>=0?'up':'down'}">${fmtPct(yoyPct)}</span>`
-      : '—';
 
     tbody.innerHTML += `
       <tr>
         <td>${period}</td>
         <td>${fmt(val)}</td>
-        <td>${momBadge}</td>
-        <td>${yoyBadge}</td>
+        <td>${momPct !== null ? `<span class="badge ${momPct>=0?'up':'down'}">${fmtPct(momPct)}</span>` : '—'}</td>
+        <td>${yoyPct !== null ? `<span class="badge ${yoyPct>=0?'up':'down'}">${fmtPct(yoyPct)}</span>` : '—'}</td>
         <td>${ma !== null ? fmt(ma) : '—'}</td>
       </tr>`;
   });
 }
 
-// 초기 로드
 loadData();
 </script>
 </body>
