@@ -267,6 +267,58 @@
     </div>
   </div>
 
+  <!-- ⑤ 아파트 착공 -->
+  <div class="section-bar">
+    <span class="section-dot" style="background:var(--accent6)"></span>
+    <span class="section-label">⑤ 아파트 착공 — 월계</span>
+  </div>
+  <div class="kpi-grid" id="kpi-apt-start"></div>
+  <div class="section-body">
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">월별 착공 추이</span><span class="panel-sub" id="sub-apt-start">—</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-apt-start-main"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-apt-start-yoy"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row mt24">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연간 착공 합계</span><span class="panel-sub">연도별</span></div>
+        <div class="chart-wrap short"><canvas id="chart-apt-start-annual"></canvas></div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- ⑥ 아파트 준공 -->
+  <div class="section-bar">
+    <span class="section-dot" style="background:var(--accent4)"></span>
+    <span class="section-label">⑥ 아파트 준공 — 월계</span>
+  </div>
+  <div class="kpi-grid" id="kpi-apt-done"></div>
+  <div class="section-body">
+    <div class="chart-row">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">월별 준공 추이</span><span class="panel-sub" id="sub-apt-done">—</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-apt-done-main"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연도별 월별 비교</span><span class="panel-sub">연도 오버레이</span></div>
+        <div class="chart-wrap tall"><canvas id="chart-apt-done-yoy"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-row mt24">
+      <div class="chart-panel">
+        <div class="panel-header"><span class="panel-title">연간 준공 합계</span><span class="panel-sub">연도별</span></div>
+        <div class="chart-wrap short"><canvas id="chart-apt-done-annual"></canvas></div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+
   <!-- RAW 데이터 -->
   <div class="section-bar">
     <span class="section-dot" style="background:var(--text-muted)"></span>
@@ -302,6 +354,20 @@
         <table><thead><tr><th>기준월</th><th style="color:var(--accent)">인허가(호)</th><th>전월비</th><th>전년동월비</th><th>3M 이동평균</th></tr></thead>
         <tbody id="table-apt"></tbody></table>
       </div>
+      <div>
+        <div class="panel-header" style="margin-bottom:12px">
+          <span class="panel-title" style="color:var(--accent6)">■ 아파트 착공</span>
+        </div>
+        <table><thead><tr><th>기준월</th><th style="color:var(--accent6)">착공(호)</th><th>전월비</th><th>전년동월비</th><th>3M 이동평균</th></tr></thead>
+        <tbody id="table-apt-start"></tbody></table>
+      </div>
+      <div>
+        <div class="panel-header" style="margin-bottom:12px">
+          <span class="panel-title" style="color:var(--accent4)">■ 아파트 준공</span>
+        </div>
+        <table><thead><tr><th>기준월</th><th style="color:var(--accent4)">준공(호)</th><th>전월비</th><th>전년동월비</th><th>3M 이동평균</th></tr></thead>
+        <tbody id="table-apt-done"></tbody></table>
+      </div>
     </div>
   </div>
 
@@ -318,8 +384,8 @@ const charts = {};
 
 // 데이터
 let permitMulti=[], permitDase=[], permitYeon=[], permitApt=[];
-let startMulti=[], startDase=[], startYeon=[];
-let doneMulti=[], doneDase=[], doneYeon=[];
+let startMulti=[], startDase=[], startYeon=[], startApt=[];
+let doneMulti=[], doneDase=[], doneYeon=[], doneApt=[];
 
 function fmt(n){ return(n==null||isNaN(n))?'—':Math.round(n).toLocaleString('ko-KR'); }
 function fmtPct(n){ return(n==null||isNaN(n))?'—':(n>=0?'+':'')+n.toFixed(1)+'%'; }
@@ -381,10 +447,12 @@ async function loadData(){
     // 착공 (월계 - 변환 불필요)
     const s=processTypeData(d2,['다세대','연립'],false);
     startDase=s.t1; startYeon=s.t2; startMulti=s.combined;
+    startApt=d2.filter(d=>d.C1_NM==='서울'&&d.C2_NM==='아파트').sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
 
     // 준공 (월계 - 변환 불필요)
     const dn=processTypeData(d3,['다세대','연립'],false);
     doneDase=dn.t1; doneYeon=dn.t2; doneMulti=dn.combined;
+    doneApt=d3.filter(d=>d.C1_NM==='서울'&&d.C2_NM==='아파트').sort((a,b)=>a.PRD_DE.localeCompare(b.PRD_DE));
 
     document.getElementById('last-updated').textContent=
       `갱신: ${new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
@@ -408,11 +476,15 @@ function updateAll(){
   renderSection('permit',permitMulti,permitDase,permitYeon,'#d2a8ff','#58a6ff',true);
   renderSection('start',startMulti,startDase,startYeon,'#58a6ff','#3fb950',false);
   renderSection('done',doneMulti,doneDase,doneYeon,'#3fb950','#f0883e',false);
-  renderAptSection();
+  renderAptSection('apt',permitApt,'#f0883e','#58a6ff');
+  renderAptSection('apt-start',startApt,'#ffa657','#3fb950');
+  renderAptSection('apt-done',doneApt,'#ff7b72','#f0883e');
   renderRawTable('table-permit',permitMulti,'#d2a8ff');
   renderRawTable('table-start',startMulti,'#58a6ff');
   renderRawTable('table-done',doneMulti,'#3fb950');
   renderRawTable('table-apt',permitApt,'#f0883e');
+  renderRawTable('table-apt-start',startApt,'#ffa657');
+  renderRawTable('table-apt-done',doneApt,'#ff7b72');
   const p=permitMulti;
   document.getElementById('footer-period').textContent=
     `수록기간: ${p[0].PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2')} ~ ${p[p.length-1].PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2')}`;
@@ -559,15 +631,15 @@ function renderSection(key,combined,t1,t2,barColor,lineColor){
   renderYoY(`chart-${key}-yoy`,combined);
 }
 
-function renderAptSection(){
-  const ranged=applyRange(permitApt);
+function renderAptSection(key,data,barColor,lineColor){
+  const ranged=applyRange(data);
   const labels=ranged.map(d=>d.PRD_DE.replace(/(\d{4})(\d{2})/,'$1.$2'));
   const values=ranged.map(d=>parseFloat(d.DT)||0);
-  renderKPI('kpi-apt',permitApt,'#f0883e');
-  renderBarLine('chart-apt-main',labels,values,'#f0883e','#58a6ff');
-  document.getElementById('sub-apt').textContent=`${labels[0]} ~ ${labels[labels.length-1]}`;
-  renderAnnual('chart-apt-annual',permitApt,'#f0883e');
-  renderYoY('chart-apt-yoy',permitApt);
+  renderKPI(`kpi-${key}`,data,barColor);
+  renderBarLine(`chart-${key}-main`,labels,values,barColor,lineColor);
+  document.getElementById(`sub-${key}`).textContent=`${labels[0]} ~ ${labels[labels.length-1]}`;
+  renderAnnual(`chart-${key}-annual`,data,barColor);
+  renderYoY(`chart-${key}-yoy`,data);
 }
 
 function renderRawTable(tbodyId,data,color){
