@@ -1,6 +1,8 @@
+const https = require('https');
+
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
-  
+
   const orgId = params.orgId || '116';
   const tblId = params.tblId || 'DT_MLTM_1946';
   const prdSe = params.prdSe || 'M';
@@ -26,21 +28,33 @@ exports.handler = async (event) => {
 
   const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?${query}`;
 
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify(data),
-    };
-  } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: e.message }),
-    };
-  }
+  return new Promise((resolve) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          resolve({
+            statusCode: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            },
+            body: JSON.stringify(parsed),
+          });
+        } catch(e) {
+          resolve({
+            statusCode: 500,
+            body: JSON.stringify({ error: 'parse failed', raw: data.slice(0, 200) }),
+          });
+        }
+      });
+    }).on('error', (e) => {
+      resolve({
+        statusCode: 500,
+        body: JSON.stringify({ error: e.message }),
+      });
+    });
+  });
 };
